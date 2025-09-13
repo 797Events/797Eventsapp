@@ -1,0 +1,722 @@
+HTML:<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<!-- Tweakpane -->
+<div id="tweakpane-container"></div>
+
+<!-- Content -->
+<div class="container">
+	<div id="shimmer-container" class="shimmer-container">
+		<canvas id="shimmer-canvas"></canvas>
+		<div class="overlay-gradient"></div>
+		<h1 id="design-text"></h1>
+	</div>
+</div>
+
+<!-- Credits Button -->
+<div class="button-wrap">
+	<button onclick="window.open('https://twitter.com/intent/follow?screen_name=_jshmllr', '_blank')">
+		      <svg class="button-icon" viewBox="0 0 132 74" fill="none">
+        <path d="M59.1235 0.5H80.1385V73.5H59.1235V0.5Z" fill="#101211"/>
+        <path d="M84.5635 0.5H105.579V73.5H84.5635V0.5Z" fill="#101211"/>
+        <path d="M50.5735 40.043C53.2975 33.468 54.6995 26.42 54.6995 19.303V0.5H0.502502V19.303H35.7305C35.7305 23.929 34.8195 28.51 33.0485 32.784C31.2785 37.058 28.6835 40.942 25.4125 44.213C22.1415 47.484 18.2575 50.079 13.9835 51.849C9.70951 53.62 5.1285 54.531 0.502502 54.531V73.5C7.6195 73.5 14.6675 72.098 21.2425 69.375C27.8185 66.651 33.7925 62.659 38.8255 57.626C43.8585 52.593 47.8505 46.619 50.5735 40.043Z" fill="#101211"/>
+        <path d="M110.487 0.5H131.497V73.5H110.487V0.5Z" fill="#101211"/>
+      </svg>
+	</button>
+	<div class="button-shadow"></div>
+</div>
+CSS:* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	background-color: #131313;
+	height: 100vh;
+	overflow: hidden;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+		Arial, sans-serif;
+}
+
+.container {
+	width: 100vw;
+	height: 100vh;
+	padding: 1rem;
+}
+
+.shimmer-container {
+	width: 100%;
+	height: 100%;
+	position: relative;
+	overflow: hidden;
+}
+
+#shimmer-canvas {
+	width: 100%;
+	height: 100%;
+	will-change: mask-position;
+	transform: translateZ(0);
+}
+
+#design-text {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	color: white;
+	font-family: "Press Start 2P", cursive;
+	z-index: 10;
+	white-space: nowrap;
+	letter-spacing: 0.25rem;
+	pointer-events: none;
+}
+
+.overlay-gradient {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: radial-gradient(
+		circle at center,
+		rgba(19, 19, 19, 0.8) 15%,
+		rgba(19, 19, 19, 0.4) 30%,
+		rgba(19, 19, 19, 0) 70%
+	);
+	z-index: 5;
+	pointer-events: none;
+}
+
+#tweakpane-container {
+	position: fixed;
+	top: 20px;
+	right: 20px;
+	z-index: 9999;
+	user-select: none;
+	max-width: 300px;
+}
+
+@keyframes moveMask {
+	0% {
+		-webkit-mask-position: 0% 0%;
+		mask-position: 0% 0%;
+	}
+	100% {
+		-webkit-mask-position: -300% 0%;
+		mask-position: -300% 0%;
+	}
+}
+
+/* Credits Button - Scoped to avoid conflicts */
+.button-wrap {
+	overflow: visible !important;
+	/* Isolate CSS custom properties to button-wrap scope */
+	--btn--angle-1: -75deg;
+	--btn--angle-2: -45deg;
+	--btn--size: 3em;
+	--btn--hover-time: 400ms;
+	--btn--hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
+	--btn--border-width: clamp(1px, 0.0625em, 2px);
+	--btn--shadow-cuttoff-fix: 2em;
+
+	/* Core Button Container Styles */
+	width: var(--btn--size) !important;
+	height: var(--btn--size) !important;
+	position: fixed !important;
+	bottom: 20px !important;
+	left: 20px !important;
+	z-index: 99999 !important; /* 
+	Increased to be higher than tweakpane */
+	display: block !important; /* Force visibility */
+	border-radius: 50%;
+	background: transparent;
+	pointer-events: none;
+	transition: all var(--btn--hover-time) var(--btn--hover-ease);
+	font-size: 16px; /* Base font size to avoid inheritance */
+}
+
+/* Nuclear reset for button children - Stronger specificity */
+.button-wrap *,
+.button-wrap *::before,
+.button-wrap *::after {
+	display: revert;
+	box-sizing: border-box;
+}
+
+/* ========== BUTTON SHADOW ========== */
+.button-wrap .button-shadow {
+	position: absolute;
+	width: calc(100% + var(--btn--shadow-cuttoff-fix));
+	height: calc(100% + var(--btn--shadow-cuttoff-fix));
+	top: calc(0% - var(--btn--shadow-cuttoff-fix) / 2);
+	left: calc(0% - var(--btn--shadow-cuttoff-fix) / 2);
+	filter: blur(clamp(2px, 0.125em, 12px));
+	-webkit-filter: blur(clamp(2px, 0.125em, 12px));
+	border-radius: 50%;
+	overflow: visible;
+	pointer-events: none;
+}
+
+.button-wrap .button-shadow::after {
+	content: "";
+	position: absolute;
+	z-index: 0;
+	inset: 0;
+	border-radius: 50%;
+	background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.1));
+	width: calc(100% - var(--btn--shadow-cuttoff-fix) - 0.25em);
+	height: calc(100% - var(--btn--shadow-cuttoff-fix) - 0.25em);
+	top: calc(var(--btn--shadow-cuttoff-fix) - 0.5em);
+	left: calc(var(--btn--shadow-cuttoff-fix) - 0.875em);
+	padding: 0.125em;
+	box-sizing: border-box;
+	mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+	-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+	mask-composite: exclude;
+	-webkit-mask-composite: exclude;
+	transition: all var(--btn--hover-time) var(--btn--hover-ease);
+	opacity: 1;
+}
+
+/* ========== BUTTON CORE STYLES ========== */
+.button-wrap button {
+	all: unset;
+	cursor: pointer;
+	position: relative;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center !important;
+	justify-content: center !important;
+	border-radius: 50%;
+	-webkit-tap-highlight-color: transparent;
+	pointer-events: auto;
+	z-index: 3;
+	background: linear-gradient(
+		-75deg,
+		rgba(255, 255, 255, 0.05),
+		rgba(255, 255, 255, 0.2),
+		rgba(255, 255, 255, 0.05)
+	);
+	box-shadow: inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
+		inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
+		0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.2),
+		0 0 0.1em 0.25em inset rgba(255, 255, 255, 0.2);
+	backdrop-filter: blur(clamp(1px, 0.125em, 4px));
+	-webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px));
+	transition: all var(--btn--hover-time) var(--btn--hover-ease);
+	font-family: inherit;
+}
+
+/* ========== BUTTON STATES ========== */
+.button-wrap button:hover {
+	transform: scale(0.975);
+	backdrop-filter: blur(0.01em);
+	-webkit-backdrop-filter: blur(0.01em);
+	box-shadow: inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
+		inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
+		0 0.15em 0.05em -0.1em rgba(0, 0, 0, 0.25),
+		0 0 0.05em 0.1em inset rgba(255, 255, 255, 0.5);
+}
+
+.button-wrap button:active {
+	transform: scale(0.95);
+}
+
+/* ========== SVG STYLING ========== */
+/* Fix SVG reset */
+.button-wrap svg {
+	display: block !important;
+	width: 55% !important;
+	height: 55% !important;
+}
+
+.button-wrap svg path {
+	fill: white !important;
+}
+
+.button-wrap button svg {
+	width: 55%;
+	height: 55%;
+	filter: drop-shadow(0em 0.25em 0.05em rgba(0, 0, 0, 0.1));
+	transition: all var(--btn--hover-time) var(--btn--hover-ease);
+}
+
+.button-wrap button:hover svg {
+	filter: drop-shadow(0.025em 0.025em 0.025em rgba(0, 0, 0, 0.12));
+}
+
+.button-wrap button:active svg {
+	filter: drop-shadow(0.025em 0.25em 0.05em rgba(0, 0, 0, 0.12));
+	transform: scale(0.9);
+}
+
+/* ========== GRADIENT EFFECTS ========== */
+.button-wrap button::after {
+	content: "";
+	position: absolute;
+	z-index: 1;
+	inset: 0;
+	border-radius: 50%;
+	padding: var(--btn--border-width);
+	background: conic-gradient(
+			from var(--btn--angle-1) at 50% 50%,
+			rgba(0, 0, 0, 0.5),
+			rgba(0, 0, 0, 0) 5% 40%,
+			rgba(0, 0, 0, 0.5) 50%,
+			rgba(0, 0, 0, 0) 60% 95%,
+			rgba(0, 0, 0, 0.5)
+		),
+		linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5));
+	mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+	-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+	mask-composite: exclude;
+	-webkit-mask-composite: exclude;
+	transition: all var(--btn--hover-time) var(--btn--hover-ease),
+		--btn--angle-1 500ms ease;
+}
+
+.button-wrap button:hover::after {
+	--btn--angle-1: -125deg;
+}
+
+.button-wrap button:active::after {
+	--btn--angle-1: -75deg;
+}
+
+/* ========== SHADOW STATES ========== */
+.button-wrap:has(button:hover) .button-shadow {
+	filter: blur(clamp(2px, 0.0625em, 6px));
+	-webkit-filter: blur(clamp(2px, 0.0625em, 6px));
+}
+
+.button-wrap:has(button:hover) .button-shadow::after {
+	top: calc(var(--btn--shadow-cuttoff-fix) - 0.875em);
+	opacity: 1;
+}
+
+.button-wrap:has(button:active) .button-shadow {
+	filter: blur(clamp(2px, 0.125em, 12px));
+	-webkit-filter: blur(clamp(2px, 0.125em, 12px));
+}
+
+.button-wrap:has(button:active) .button-shadow::after {
+	top: calc(var(--btn--shadow-cuttoff-fix) - 0.5em);
+	opacity: 0.75;
+}
+
+/* ========== 3D ROTATION EFFECT ========== */
+.button-wrap:has(button:active) {
+	transform: rotate3d(1, 0, 0, 25deg);
+}
+
+/* Support for browsers that don't support :has() */
+@supports not (selector(:has(*))) {
+	.button-wrap button:hover + .button-shadow {
+		filter: blur(clamp(2px, 0.0625em, 6px));
+		-webkit-filter: blur(clamp(2px, 0.0625em, 6px));
+	}
+
+	.button-wrap button:hover + .button-shadow::after {
+		top: calc(var(--btn--shadow-cuttoff-fix) - 0.875em);
+		opacity: 1;
+	}
+
+	.button-wrap button:active + .button-shadow {
+		filter: blur(clamp(2px, 0.125em, 12px));
+		-webkit-filter: blur(clamp(2px, 0.125em, 12px));
+	}
+
+	.button-wrap button:active + .button-shadow::after {
+		top: calc(var(--btn--shadow-cuttoff-fix) - 0.5em);
+		opacity: 0.75;
+	}
+
+	.button-wrap button:active ~ .button-wrap {
+		transform: rotate3d(1, 0, 0, 25deg);
+	}
+}
+JS:import { Pane } from "https://cdn.skypack.dev/tweakpane@4.0.4";
+window.Tweakpane = { Pane };
+
+// Perlin noise implementation
+class PerlinNoise {
+	constructor() {
+		this.p = new Array(512);
+		this.init();
+	}
+
+	init() {
+		for (let i = 0; i < 256; i++) {
+			this.p[i] = this.p[i + 256] = Math.floor(Math.random() * 256);
+		}
+	}
+
+	fade(t) {
+		return t * t * t * (t * (t * 6 - 15) + 10);
+	}
+
+	lerp(t, a, b) {
+		return a + t * (b - a);
+	}
+
+	grad(hash, x, y) {
+		const h = hash & 15;
+		const u = h < 8 ? x : y;
+		const v = h < 4 ? y : h === 12 || h === 14 ? x : 0;
+		return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+	}
+
+	noise(x, y) {
+		const X = Math.floor(x) & 255;
+		const Y = Math.floor(y) & 255;
+		x -= Math.floor(x);
+		y -= Math.floor(y);
+		const u = this.fade(x);
+		const v = this.fade(y);
+		const A = this.p[X] + Y;
+		const B = this.p[X + 1] + Y;
+		return this.lerp(
+			v,
+			this.lerp(u, this.grad(this.p[A], x, y), this.grad(this.p[B], x - 1, y)),
+			this.lerp(
+				u,
+				this.grad(this.p[A + 1], x, y - 1),
+				this.grad(this.p[B + 1], x - 1, y - 1)
+			)
+		);
+	}
+
+	generatePerlinNoise(width, height, cellSize) {
+		const noiseCanvas = document.createElement("canvas");
+		noiseCanvas.width = width;
+		noiseCanvas.height = height;
+		const noiseCtx = noiseCanvas.getContext("2d");
+		const imageData = noiseCtx.createImageData(width, height);
+		const data = imageData.data;
+
+		for (let y = 0; y < height; y++) {
+			for (let x = 0; x < width; x++) {
+				const value = ((this.noise(x / cellSize, y / cellSize) + 1) / 2) * 255;
+				const cell = (x + y * width) * 4;
+				data[cell] = data[cell + 1] = data[cell + 2] = value;
+				data[cell + 3] = 255;
+			}
+		}
+
+		noiseCtx.putImageData(imageData, 0, 0);
+		return noiseCanvas;
+	}
+
+	createSeamlessPerlinNoise(width, height, cellSize) {
+		const singleNoise = this.generatePerlinNoise(width, height, cellSize);
+		const seamlessCanvas = document.createElement("canvas");
+		seamlessCanvas.width = width * 4;
+		seamlessCanvas.height = height;
+		const seamlessCtx = seamlessCanvas.getContext("2d");
+
+		// Draw first noise pattern
+		seamlessCtx.drawImage(singleNoise, 0, 0);
+
+		// Draw flipped middle pattern
+		seamlessCtx.save();
+		seamlessCtx.translate(width * 2, 0);
+		seamlessCtx.scale(-1, 1);
+		seamlessCtx.drawImage(singleNoise, 0, 0);
+		seamlessCtx.restore();
+
+		// Draw third noise pattern
+		seamlessCtx.drawImage(singleNoise, width * 2, 0);
+
+		// Draw flipped fourth image
+		seamlessCtx.save();
+		seamlessCtx.translate(width * 4, 0);
+		seamlessCtx.scale(-1, 1);
+		seamlessCtx.drawImage(singleNoise, 0, 0);
+		seamlessCtx.restore();
+
+		return seamlessCanvas.toDataURL();
+	}
+}
+
+function init() {
+	// DOM elements
+	const shimmerContainer = document.getElementById("shimmer-container");
+	const canvas = document.getElementById("shimmer-canvas");
+	const ctx = canvas.getContext("2d");
+	const designText = document.getElementById("design-text");
+
+	// Initial settings
+	const settings = {
+		shapeType: "Circle",
+		size: 5,
+		gap: 8,
+		colors: ["rgb(255,255,255)"],
+		contrast: 2,
+		speed: 32,
+		radius: 0,
+		animate: true,
+		text: "DESIGN",
+		textSize: 2.5,
+		letterSpacing: 0.25
+	};
+
+	// Initialize Perlin noise
+	const perlin = new PerlinNoise();
+
+	// Function to get random opacity
+	function getRandomOpacity() {
+		let opacity = Math.random();
+		if (settings.contrast > 0) {
+			opacity = Math.pow(opacity, 1 + settings.contrast / 5);
+		} else if (settings.contrast < 0) {
+			opacity = 1 - Math.pow(1 - opacity, 1 - settings.contrast / 5);
+		}
+		return opacity;
+	}
+
+	// Function to draw shapes (must be defined BEFORE being called)
+	function drawShapes() {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		const colorBatch =
+			settings.colors.length > 0 ? settings.colors : ["rgb(128,128,128)"];
+
+		for (let y = 0; y < canvas.height; y += settings.size + settings.gap) {
+			for (let x = 0; x < canvas.width; x += settings.size + settings.gap) {
+				const color = colorBatch[Math.floor(Math.random() * colorBatch.length)];
+				const opacity = getRandomOpacity();
+				ctx.fillStyle = color.replace(")", `,${opacity})`).replace("rgb", "rgba");
+
+				if (settings.shapeType === "Square") {
+					ctx.fillRect(x, y, settings.size, settings.size);
+				} else {
+					ctx.beginPath();
+					ctx.arc(
+						x + settings.size / 2,
+						y + settings.size / 2,
+						settings.size / 2,
+						0,
+						2 * Math.PI
+					);
+					ctx.fill();
+				}
+			}
+		}
+	}
+
+	// Function to resize canvas
+	function resizeCanvas() {
+		canvas.width = shimmerContainer.offsetWidth;
+		canvas.height = shimmerContainer.offsetHeight;
+		drawShapes(); // Now properly defined
+		updateMask();
+	}
+
+	// Update text function
+	function updateText() {
+		designText.textContent = settings.text;
+		designText.style.fontSize = `${settings.textSize}rem`;
+		designText.style.letterSpacing = `${settings.letterSpacing}rem`;
+	}
+
+	// Mask function
+	function updateMask() {
+		if (settings.animate) {
+			const width = canvas.width;
+			const height = canvas.height;
+			const cellSize = Math.max(25, settings.size * 2);
+			const perlinNoiseDataUrl = perlin.createSeamlessPerlinNoise(
+				width,
+				height,
+				cellSize
+			);
+
+			// Size-dependent animation calculations
+			const sizeFactor = Math.max(1, settings.size / 3); // Normalize to base size 3
+			const baseValue = width * 2250 * sizeFactor;
+			const maxSpeed = 100;
+			const powerFactor =
+				Math.log(baseValue / (baseValue / 100)) / Math.log(maxSpeed);
+			const animationDuration = Math.round(
+				baseValue / Math.pow(settings.speed, powerFactor)
+			);
+
+			// Size-dependent mask position scaling
+			const maskTravelDistance = 300 * (settings.size / 10); // 300% at size 10
+
+			// Dynamic keyframe injection
+			let style = document.getElementById("mask-animation");
+			if (!style) {
+				style = document.createElement("style");
+				style.id = "mask-animation";
+				document.head.appendChild(style);
+			}
+
+			style.textContent = `
+      @keyframes moveMask {
+        0% { 
+          mask-position: 0% 0%;
+          -webkit-mask-position: 0% 0%;
+        }
+        100% { 
+          mask-position: -${maskTravelDistance}% 0%;
+          -webkit-mask-position: -${maskTravelDistance}% 0%;
+        }
+      }
+    `;
+
+			// Apply mask properties
+			canvas.style.maskImage = `url(${perlinNoiseDataUrl})`;
+			canvas.style.webkitMaskImage = `url(${perlinNoiseDataUrl})`;
+			canvas.style.maskMode = "luminance";
+			canvas.style.webkitMaskMode = "luminance";
+			canvas.style.maskSize = `${300 * sizeFactor}% 100%`;
+			canvas.style.webkitMaskSize = `${300 * sizeFactor}% 100%`;
+			canvas.style.maskRepeat = "repeat-x";
+			canvas.style.webkitMaskRepeat = "repeat-x";
+			canvas.style.animation = `moveMask ${animationDuration}ms linear infinite`;
+			canvas.style.willChange = "mask-position";
+		} else {
+			canvas.style.animation = "none";
+			canvas.style.webkitAnimation = "none";
+			canvas.style.maskImage = "none";
+			canvas.style.webkitMaskImage = "none";
+		}
+		shimmerContainer.style.borderRadius = `${settings.radius}px`;
+	}
+
+	// Initialize Tweakpane
+	const pane = new window.Tweakpane.Pane({
+		title: "Config",
+		container: document.getElementById("tweakpane-container")
+	});
+
+	// Add controls with individual event handlers
+	pane
+		.addBinding(settings, "shapeType", {
+			options: { Square: "Square", Circle: "Circle" }
+		})
+		.on("change", () => {
+			drawShapes();
+			updateMask();
+		});
+
+	pane
+		.addBinding(settings, "size", { min: 1, max: 20, step: 1 })
+		.on("change", () => {
+			drawShapes();
+			updateMask();
+		});
+
+	pane.addBinding(settings, "animate").on("change", () => {
+		updateMask();
+	});
+
+	// Text controls
+	const textFolder = pane.addFolder({ title: "Text" });
+	textFolder.addBinding(settings, "text").on("change", () => updateText());
+	// Text size control
+	textFolder
+		.addBinding(settings, "textSize", {
+			min: 0.5,
+			max: 10,
+			step: 0.1
+		})
+		.on("change", () => updateText());
+
+	// Letter spacing control
+	textFolder
+		.addBinding(settings, "letterSpacing", {
+			label: "spacing",
+			min: 0,
+			max: 2,
+			step: 0.1
+		})
+		.on("change", () => updateText());
+
+	// Add other controls
+	const effectsFolder = pane.addFolder({ title: "Effects" });
+	effectsFolder
+		.addBinding(settings, "contrast", { min: -10, max: 10, step: 1 })
+		.on("change", () => drawShapes());
+	effectsFolder
+		.addBinding(settings, "speed", { min: 1, max: 100, step: 1 })
+		.on("change", () => updateMask());
+	effectsFolder
+		.addBinding(settings, "radius", { min: 0, max: 100, step: 1 })
+		.on("change", () => updateMask());
+
+	// Color controls
+	const colorFolder = pane.addFolder({ title: "Colors" });
+	colorFolder.addButton({ title: "Add Color" }).on("click", () => {
+		settings.colors.push("rgb(128,128,128)");
+		updateColorPickers();
+		drawShapes();
+	});
+
+	// Color pickers container
+	const colorPickersContainer = document.createElement("div");
+	colorFolder.element.appendChild(colorPickersContainer);
+
+	function updateColorPickers() {
+		colorPickersContainer.innerHTML = "";
+		settings.colors.forEach((color, index) => {
+			const colorRow = document.createElement("div");
+			colorRow.style.display = "flex";
+			colorRow.style.alignItems = "center";
+			colorRow.style.marginBottom = "5px";
+
+			const colorPicker = document.createElement("input");
+			colorPicker.type = "color";
+			colorPicker.value = rgbToHex(color);
+			colorPicker.style.marginRight = "10px";
+			colorPicker.addEventListener("input", (e) => {
+				settings.colors[index] = hexToRgb(e.target.value);
+				drawShapes();
+			});
+
+			const removeButton = document.createElement("button");
+			removeButton.textContent = "Remove";
+			removeButton.addEventListener("click", () => {
+				settings.colors.splice(index, 1);
+				updateColorPickers();
+				drawShapes();
+			});
+
+			colorRow.appendChild(colorPicker);
+			colorRow.appendChild(removeButton);
+			colorPickersContainer.appendChild(colorRow);
+		});
+		colorFolder.title = `Colors [${settings.colors.length} Items]`;
+	}
+
+	// Helper functions
+	function rgbToHex(rgb) {
+		const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+		return match
+			? `#${match
+					.slice(1)
+					.map((n) => parseInt(n).toString(16).padStart(2, "0"))
+					.join("")}`
+			: "#808080";
+	}
+
+	function hexToRgb(hex) {
+		const r = parseInt(hex.slice(1, 3), 16);
+		const g = parseInt(hex.slice(3, 5), 16);
+		const b = parseInt(hex.slice(5, 7), 16);
+		return `rgb(${r},${g},${b})`;
+	}
+
+	// Initial setup
+	updateColorPickers();
+	updateText();
+	resizeCanvas();
+	window.addEventListener("resize", resizeCanvas);
+}
+
+init();

@@ -1,0 +1,330 @@
+HTML:<canvas class="webgl"></canvas>
+
+<script id="snoise-function" type="x-shader/x-vertex">
+  vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+
+  float snoise(vec2 v) {
+    const vec4 C = vec4(0.211324865405187,  // (3.0-sqrt(3.0))/6.0
+                        0.366025403784439,  // 0.5*(sqrt(3.0)-1.0)
+                        -0.577350269189626,  // -1.0 + 2.0 * C.x
+                        0.024390243902439); // 1.0 / 41.0
+    vec2 i  = floor(v + dot(v, C.yy) );
+    vec2 x0 = v -   i + dot(i, C.xx);
+    vec2 i1;
+    i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+    vec4 x12 = x0.xyxy + C.xxzz;
+    x12.xy -= i1;
+    i = mod289(i); // Avoid truncation effects in permutation
+    vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+        + i.x + vec3(0.0, i1.x, 1.0 ));
+
+    vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+    m = m*m ;
+    m = m*m ;
+    vec3 x = 2.0 * fract(p * C.www) - 1.0;
+    vec3 h = abs(x) - 0.5;
+    vec3 ox = floor(x + 0.5);
+    vec3 a0 = x - ox;
+    m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+    vec3 g;
+    g.x  = a0.x  * x0.x  + h.x  * x0.y;
+    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+    return 130.0 * dot(m, g);
+  }
+</script>
+<script id="vertex-shader" type="x-shader/x-vertex">
+  uniform float u_time;
+  uniform vec2 u_randomisePosition;
+
+  varying float vDistortion;
+  varying float xDistortion;
+  varying vec2 vUv;
+
+  void main() {
+      vUv = uv;
+      vDistortion = snoise(vUv.xx * 1. - u_randomisePosition * 0.2);
+      xDistortion = snoise(vUv.yy * 1. - u_randomisePosition * 0.1);
+      vec3 pos = position;
+      pos.z += (vDistortion * 1.);
+      pos.x += (xDistortion * 1.);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  }
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+
+  vec3 rgb(float r, float g, float b) {
+      return vec3(r / 255., g / 255., b / 255.);
+  }
+
+  vec3 rgb(float c) {
+      return vec3(c / 255., c / 255., c / 255.);
+  }
+
+  uniform vec3 u_bg;
+  uniform vec3 u_bgMain;
+  uniform vec3 u_color1;
+  uniform vec3 u_color2;
+  uniform float u_time;
+
+  varying vec2 vUv;
+  varying float vDistortion;
+
+  void main() {
+      vec3 bg = rgb(u_bg.r, u_bg.g, u_bg.b);
+      vec3 c1 = rgb(u_color1.r, u_color1.g, u_color1.b);
+      vec3 c2 = rgb(u_color2.r, u_color2.g, u_color2.b);
+      vec3 bgMain = rgb(u_bgMain.r, u_bgMain.g, u_bgMain.b);
+
+      float noise1 = snoise(vUv + u_time * 0.2);
+      float noise2 = snoise(vUv * 1.0 + u_time * 0.2);
+
+      vec3 color = bg;
+      color = mix(color, c1, noise1 * 0.008);
+      color = mix(color, c2, noise2 * 0.008);
+
+      color = mix(color, mix(c1, c2, vUv.x), vDistortion);
+
+      float border = smoothstep(0.03, 0.7, vUv.x);
+
+      color = mix(color, bgMain, 1. -border);
+
+      gl_FragColor = vec4(color, 1.0);
+  }
+</script>
+CSS:* {
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: black;
+}
+
+.webgl {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  outline: none;
+}
+JS:console.clear();
+
+import * as THREE from "https://cdn.skypack.dev/three@0.132.2";
+
+/**
+ * Variables
+ */
+const webglContainer = document.querySelector('.webgl');
+
+// Sizes
+const sizes = {
+  width: webglContainer.clientWidth,
+  height: webglContainer.clientHeight
+}
+
+// Cursor Settings
+const cursor = {
+  x: 0,
+  y: 0,
+}
+
+function randomInteger(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function rgb(r, g, b) {
+  return new THREE.Vector3(r, g, b);
+}
+
+let vCheck = false;
+
+var randomisePosition = new THREE.Vector2(1, 2);
+
+var R = function(x, y, t) {
+    return( Math.floor(192 + 64*Math.cos( (x*x-y*y)/300 + t )) );
+}
+var G = function(x, y, t) {
+    return( Math.floor(192 + 64*Math.sin( (x*x*Math.cos(t/4)+y*y*Math.sin(t/3))/300 ) ) );
+}
+var B = function(x, y, t) {
+    return( Math.floor(192 + 64*Math.sin( 5*Math.sin(t/9) + ((x-100)*(x-100)+(y-100)*(y-100))/1100) ));
+}
+
+let sNoise = document.querySelector('#snoise-function').textContent
+
+
+/**
+ * Base
+ */
+
+// Canvas
+const canvas = document.querySelector('canvas.webgl')
+
+// Scene
+const scene = new THREE.Scene()
+scene.background = new THREE.Color(0x000000)
+
+
+/**
+ * Plane
+ */
+
+const gradientGeometry = new THREE.PlaneBufferGeometry(8, 8, 40, 40);
+
+let gradientMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    u_bg: {type: 'v3', value: rgb(0, 47, 76)},
+    u_bgMain: {type: 'v3', value: rgb(110, 228, 234)},
+    u_color1: {type: 'v3', value: rgb(63, 184, 196)},
+    u_color2: {type: 'v3', value: rgb(0, 54, 81)},
+    u_time: {type: 'f', value: 30},
+    u_randomisePosition: { type: 'v2', value: randomisePosition }
+  },
+  fragmentShader: sNoise + document.querySelector('#fragment-shader').textContent,
+  vertexShader: sNoise + document.querySelector('#vertex-shader').textContent,
+});
+const gradientPlane = new THREE.Mesh(gradientGeometry, gradientMaterial)
+scene.add(gradientPlane)
+
+
+/**
+ * Camera
+ */
+
+const camera = new THREE.OrthographicCamera(
+  -1, // left
+   1, // right
+   1, // top
+  -1, // bottom
+  -1, // near,
+   1, // far
+);
+
+
+/**
+ * Resize
+ */
+
+const resize = () => {
+
+  // Update sizes
+  sizes.width = window.innerWidth
+  sizes.height = window.innerHeight
+
+  // Update camera
+  camera.aspect = sizes.width / sizes.height
+  camera.updateProjectionMatrix()
+
+  // Update renderer
+  renderer.setSize(sizes.width, sizes.height)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+}
+
+window.addEventListener('resize', () =>
+{
+  resize()
+})
+
+
+/**
+ * Cursor
+ */
+
+window.addEventListener('mousemove', (event) =>
+{
+  cursor.x = event.clientX / sizes.width - 0.5
+  cursor.y = event.clientY / sizes.height - 0.5
+})
+
+window.addEventListener('mouseout', (event) =>
+{
+  cursor.x = 0
+  cursor.y = 0
+})
+
+window.addEventListener('touchmove', (event) =>
+{
+  const touch = event.touches[0];
+  cursor.x = touch.pageX / sizes.width - 0.5;
+  cursor.y = touch.pageY / sizes.height - 0.5;
+})
+
+window.addEventListener('touchend', (event) =>
+{
+  cursor.x = 0
+  cursor.y = 0
+})
+
+
+/**
+ * Renderer
+ */
+
+const renderer = new THREE.WebGLRenderer({
+  canvas: canvas,
+  antialias: true,
+})
+renderer.outputEncoding = THREE.sRGBEncoding
+renderer.setSize(sizes.width, sizes.height)
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+
+
+/**
+ * Animate
+ */
+
+const clock = new THREE.Clock()
+let previousTime = 0
+
+let t = 0;
+let j = 0;
+let x = randomInteger(0, 32);
+let y = randomInteger(0, 32);
+
+const tick = () =>
+{
+  const elapsedTime = clock.getElapsedTime()
+  const deltaTime = elapsedTime - previousTime
+  previousTime = elapsedTime
+  
+  // Set Cursor Variables
+  const parallaxX = cursor.x * 1.75
+  const parallaxY = - cursor.y * 1.75
+  
+  gradientPlane.material.uniforms.u_randomisePosition.value = new THREE.Vector2(j, j);
+
+  gradientPlane.material.uniforms.u_time.value = t;
+  if(t % 0.1 == 0) {         
+      if(vCheck == false) {
+          x -= 1;
+          if(x <= 0) {
+              vCheck = true;
+          }
+      } else {
+          x += 1;
+          if(x >= 32) {
+              vCheck = false;
+          }
+      }
+  }
+
+  // Increase t by a certain value every frame
+  j = j + 0.01;
+  t = t + 0.05;
+  
+  // Render
+  renderer.render(scene, camera)
+
+  // Call tick again on the next frame
+  window.requestAnimationFrame(tick)
+}
+
+tick()
