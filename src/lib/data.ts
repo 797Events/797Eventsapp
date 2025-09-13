@@ -36,22 +36,6 @@ const defaultEvents: EventData[] = [
       { id: '1', name: 'General Admission', price: 150, available: 100 },
       { id: '2', name: 'VIP Package', price: 350, available: 50 }
     ]
-  },
-  {
-    id: '2',
-    title: 'The Great Indian Navratri',
-    description: 'Join us for an unforgettable night of music. A night full of joy and entertainment with celebrity performance.',
-    date: '2025-09-27',
-    time: '17:00',
-    venue: 'Moze college, Balewadi, Pune',
-    venueIcon: '🏫',
-    price: 299,
-    image: '/Assets/Passes_outlet design.jpg',
-    isActive: true,
-    passes: [
-      { id: '1', name: 'Regular Pass', price: 299, available: 200 },
-      { id: '2', name: 'Premium Pass', price: 599, available: 75 }
-    ]
   }
 ];
 
@@ -96,11 +80,11 @@ function saveEvents(events: EventData[]): void {
 let events: EventData[] = getStoredEvents();
 
 export function getEvents(): EventData[] {
-  console.log('getEvents: Starting, returning default events for now');
-
-  // Temporarily just return default events to test
-  const activeEvents = defaultEvents.filter(event => event.isActive);
-  console.log('getEvents: Active events from defaults:', activeEvents.length);
+  console.log('getEvents: Starting, getting active events from storage');
+  
+  events = getStoredEvents(); // Refresh from storage
+  const activeEvents = events.filter(event => event.isActive);
+  console.log('getEvents: Active events from storage:', activeEvents.length);
   console.log('getEvents: Active event details:', activeEvents.map(e => ({ id: e.id, title: e.title, isActive: e.isActive })));
   return activeEvents;
 }

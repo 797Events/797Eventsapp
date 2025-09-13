@@ -14,13 +14,13 @@ export default function Footer() {
             <h3 className="section-title font-montserrat">Office</h3>
             <div className="contact-info">
               <p className="address">
-                123 Business Street, City, State 12345
+                F NO18-B, SURYALOKNAGRI CO OP HSG SOC, S NO:106A/3 PT-C, HADAPSAR, Pune, Maharashtra, 411028
               </p>
               <p className="email">
                 <a href="mailto:the797events@gmail.com">the797events@gmail.com</a>
               </p>
               <p className="phone">
-                <a href="tel:+1234567890">+1 (234) 567-8900</a>
+                <a href="tel:+919028530343">+91 9028530343</a>
               </p>
             </div>
           </div>
