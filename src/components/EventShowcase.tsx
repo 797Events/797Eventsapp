@@ -87,7 +87,7 @@ export default function EventShowcase({ events, onBookNow }: EventShowcaseProps)
           <button
             onClick={() => setDisplayMode('grid')}
             className={`px-4 py-2 rounded-lg text-sm transition-all ${
-              displayMode === 'grid'
+              displayMode !== 'list'
                 ? 'bg-white/20 text-white'
                 : 'text-white/60 hover:text-white'
             }`}
