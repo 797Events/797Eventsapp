@@ -48,6 +48,11 @@ export default function Footer() {
         <div className="footer-bottom">
           <div className="footer-bottom-content">
             <SocialLinks />
+            <div className="legal-links">
+              <a href="/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+              <span className="separator">|</span>
+              <a href="/terms-and-conditions" target="_blank" rel="noopener noreferrer">Terms & Conditions</a>
+            </div>
             <p className="copyright">© 2025 797 Events. All rights reserved.</p>
           </div>
         </div>
@@ -140,6 +145,29 @@ export default function Footer() {
           flex-direction: column;
           align-items: center;
           gap: 16px;
+        }
+
+        .legal-links {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 8px 0;
+        }
+
+        .legal-links a {
+          color: rgba(255, 255, 255, 0.7);
+          text-decoration: none;
+          font-size: 14px;
+          transition: color 0.3s ease;
+        }
+
+        .legal-links a:hover {
+          color: #ffffff;
+        }
+
+        .separator {
+          color: rgba(255, 255, 255, 0.4);
+          font-size: 14px;
         }
 
         .copyright {
