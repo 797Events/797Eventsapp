@@ -45,7 +45,7 @@ export default function EventShowcase({ events, onBookNow }: EventShowcaseProps)
       <div className="w-full max-w-5xl mx-auto px-4">
         <div className="text-center mb-8">
           <h3 className="text-2xl font-bold text-white mb-2 font-montserrat">Featured Event</h3>
-          <p className="text-white/60">Don't miss this exclusive experience</p>
+          <p className="text-white/60">Don&apos;t miss this exclusive experience</p>
         </div>
         <div className="flex justify-center">
           <EventCard event={localEvents[0]} onBookNow={onBookNow} />

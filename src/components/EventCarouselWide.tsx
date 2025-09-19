@@ -15,8 +15,6 @@ export default function EventCarouselWide({ events, onBookNow }: EventCarouselWi
 
   // Force update local events when props change
   useEffect(() => {
-    console.log('EventCarouselWide: Received events update:', events.length);
-    console.log('EventCarouselWide: Events data:', events.map(e => ({ id: e.id, title: e.title, isActive: e.isActive })));
     setLocalEvents([...events]);
     if (events.length > 0 && currentIndex >= events.length) {
       setCurrentIndex(0); // Reset to first event when events change or current index is invalid
@@ -87,17 +85,6 @@ export default function EventCarouselWide({ events, onBookNow }: EventCarouselWi
 
   return (
     <div className="relative w-full">
-      {/* Debug Info - Remove in production */}
-      <div className="text-center mb-4">
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 max-w-md mx-auto">
-          <p className="text-white/80 text-xs">
-            Debug: {localEvents.length} events loaded | Current: {currentIndex + 1}
-          </p>
-          <p className="text-white/60 text-xs">
-            Events: {localEvents.map(e => e.title.substring(0, 15)).join(', ')}
-          </p>
-        </div>
-      </div>
 
       {/* Event counter */}
       <div className="text-center mb-6">

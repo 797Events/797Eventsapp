@@ -9,7 +9,7 @@ import GlassmorphModal from './GlassmorphModal';
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (user: { email: string; isAdmin: boolean }) => void;
+  onLoginSuccess: (user: { email: string; isAdmin: boolean; role?: 'admin' | 'guard' | 'influencer' }) => void;
 }
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps) {
@@ -25,19 +25,47 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginMod
     setError('');
 
     try {
-      const user = authenticateUser(email, password);
-      
+      const user = await authenticateUser(email, password);
+
       if (user) {
         const session = createSession(user);
         localStorage.setItem('session', session);
-        
-        onLoginSuccess(user);
-        onClose();
-        
-        if (user.isAdmin) {
-          router.push('/admin');
+
+        // Set role-specific session storage
+        if (user.role === 'influencer') {
+          localStorage.setItem('influencerSession', session);
+          localStorage.setItem('influencer_auth', session);
+        } else if (user.role === 'guard') {
+          localStorage.setItem('scanner_auth', session);
+          localStorage.setItem('guard_info', JSON.stringify({
+            id: user.id,
+            name: user.name,
+            location: 'Main Gate'
+          }));
         }
-        
+
+        onLoginSuccess({
+          email: user.email,
+          isAdmin: user.isAdmin,
+          role: user.role
+        });
+        onClose();
+
+        // Route based on user role
+        switch (user.role) {
+          case 'admin':
+            router.push('/admin');
+            break;
+          case 'guard':
+            router.push('/scanner');
+            break;
+          case 'influencer':
+            router.push('/influencer');
+            break;
+          default:
+            router.push('/admin');
+        }
+
         // Reset form
         setEmail('');
         setPassword('');
@@ -62,11 +90,11 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginMod
     <GlassmorphModal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Admin Login"
+      title="797 Events Login"
     >
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <p className="text-white/80">Sign in to access the admin dashboard</p>
+          <p className="text-white/80">Sign in to access your dashboard</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -114,6 +142,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginMod
             {loading ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
+
 
       </div>
     </GlassmorphModal>

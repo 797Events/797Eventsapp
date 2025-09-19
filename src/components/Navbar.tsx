@@ -8,10 +8,11 @@ interface NavbarProps {
   onLoginClick: () => void;
   isAdmin?: boolean;
   userEmail?: string;
+  userRole?: 'admin' | 'guard' | 'influencer';
   onSignOut?: () => void;
 }
 
-export default function Navbar({ onBookNowClick, onLoginClick, isAdmin, userEmail, onSignOut }: NavbarProps) {
+export default function Navbar({ onBookNowClick, onLoginClick, isAdmin, userEmail, userRole, onSignOut }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isLoggedIn = !!userEmail;
@@ -41,21 +42,37 @@ export default function Navbar({ onBookNowClick, onLoginClick, isAdmin, userEmai
 
           {/* Desktop Navigation - Right */}
           <div className="hidden md:flex items-center space-x-4">
-            
+
             {isLoggedIn ? (
               <>
                 <span className="text-white/80 text-sm hidden lg:block">
                   Hey, {userEmail?.split('@')[0]}
                 </span>
-                {isAdmin && (
-                  <Button 
+                {userRole === 'admin' && (
+                  <Button
                     onClick={() => window.location.href = '/admin'}
                     className="px-3 lg:px-4 py-2 text-sm lg:text-base"
                   >
                     Admin
                   </Button>
                 )}
-                <Button 
+                {userRole === 'guard' && (
+                  <Button
+                    onClick={() => window.location.href = '/scanner'}
+                    className="px-3 lg:px-4 py-2 text-sm lg:text-base"
+                  >
+                    Scanner
+                  </Button>
+                )}
+                {userRole === 'influencer' && (
+                  <Button
+                    onClick={() => window.location.href = '/influencer'}
+                    className="px-3 lg:px-4 py-2 text-sm lg:text-base"
+                  >
+                    Dashboard
+                  </Button>
+                )}
+                <Button
                   onClick={onSignOut}
                   className="px-3 lg:px-4 py-2 text-sm lg:text-base"
                 >
@@ -63,12 +80,14 @@ export default function Navbar({ onBookNowClick, onLoginClick, isAdmin, userEmai
                 </Button>
               </>
             ) : (
-              <Button 
-                onClick={onLoginClick}
-                className="px-4 lg:px-6 py-2 text-sm lg:text-base"
-              >
-                Login
-              </Button>
+              <>
+                <Button
+                  onClick={onLoginClick}
+                  className="px-4 lg:px-6 py-2 text-sm lg:text-base"
+                >
+                  Login
+                </Button>
+              </>
             )}
           </div>
 
@@ -110,8 +129,8 @@ export default function Navbar({ onBookNowClick, onLoginClick, isAdmin, userEmai
                   <div className="text-white/80 text-sm px-4 py-2">
                     Hey, {userEmail?.split('@')[0]}
                   </div>
-                  {isAdmin && (
-                    <Button 
+                  {userRole === 'admin' && (
+                    <Button
                       onClick={() => {
                         window.location.href = '/admin';
                         setIsMobileMenuOpen(false);
@@ -121,7 +140,29 @@ export default function Navbar({ onBookNowClick, onLoginClick, isAdmin, userEmai
                       Admin Dashboard
                     </Button>
                   )}
-                  <Button 
+                  {userRole === 'guard' && (
+                    <Button
+                      onClick={() => {
+                        window.location.href = '/scanner';
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left"
+                    >
+                      QR Scanner
+                    </Button>
+                  )}
+                  {userRole === 'influencer' && (
+                    <Button
+                      onClick={() => {
+                        window.location.href = '/influencer';
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left"
+                    >
+                      Influencer Dashboard
+                    </Button>
+                  )}
+                  <Button
                     onClick={() => {
                       onSignOut?.();
                       setIsMobileMenuOpen(false);
@@ -132,15 +173,17 @@ export default function Navbar({ onBookNowClick, onLoginClick, isAdmin, userEmai
                   </Button>
                 </>
               ) : (
-                <Button 
-                  onClick={() => {
-                    onLoginClick();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="w-full px-4 py-2 text-left"
-                >
-                  Login
-                </Button>
+                <>
+                  <Button
+                    onClick={() => {
+                      onLoginClick();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2 text-left"
+                  >
+                    Login
+                  </Button>
+                </>
               )}
             </div>
           </div>

@@ -10,6 +10,8 @@ export interface EventData {
   image: string;
   isActive: boolean;
   passes: PassType[];
+  isMultiDay?: boolean; // New field for multi-day events
+  eventDays?: EventDay[]; // New field for multi-day event details
 }
 
 export interface PassType {
@@ -17,187 +19,655 @@ export interface PassType {
   name: string;
   price: number;
   available: number;
+  dayId?: string; // Optional: which day this pass is for (for multi-day events)
 }
 
-// Default events data
-const defaultEvents: EventData[] = [
-  {
-    id: '1',
-    title: 'The Great Indian Navratri',
-    description: 'Join us for an unforgettable night of music. A night full of joy and entertainment with celebrity performance.',
-    date: '2025-09-27',
-    time: '17:00',
-    venue: 'Moze college, Balewadi, Pune',
-    venueIcon: '🏫',
-    price: 150,
-    image: '/Assets/Passes_outlet design.jpg',
-    isActive: true,
-    passes: [
-      { id: '1', name: 'General Admission', price: 150, available: 100 },
-      { id: '2', name: 'VIP Package', price: 350, available: 50 }
-    ]
-  }
-];
+export interface EventDay {
+  id: string;
+  dayNumber: number; // Day 1, Day 2, etc.
+  title: string; // e.g., "Opening Ceremony", "Main Event"
+  date: string;
+  time: string;
+  venue?: string; // Can be different venue for each day
+  venueIcon?: string;
+  description?: string;
+  passes: PassType[]; // Passes specific to this day
+}
 
-// Storage key for events
-const EVENTS_STORAGE_KEY = 'events_797';
+// API base URL - use relative URLs in browser, absolute in server
+const API_BASE = typeof window !== 'undefined'
+  ? '' // Use relative URLs in browser
+  : 'http://localhost:3003';
 
-// Get events from localStorage or default
-function getStoredEvents(): EventData[] {
-  if (typeof window === 'undefined') return defaultEvents;
-
+// API helper functions
+async function apiRequest(url: string, options: RequestInit = {}) {
   try {
-    const stored = localStorage.getItem(EVENTS_STORAGE_KEY);
-    if (stored) {
-      const parsedEvents = JSON.parse(stored);
-      console.log('getStoredEvents: Found stored events:', parsedEvents.length);
-      return parsedEvents;
+    const response = await fetch(`${API_BASE}${url}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
-  } catch (error) {
-    console.error('Error reading events from localStorage:', error);
-  }
 
-  // Initialize with default events if none exist
-  console.log('getStoredEvents: No stored events found, initializing with defaults:', defaultEvents.length);
-  localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(defaultEvents));
-  return defaultEvents;
+    return await response.json();
+  } catch (error) {
+    console.error('API request error:', error);
+    throw error;
+  }
 }
 
-// Save events to localStorage
-function saveEvents(events: EventData[]): void {
-  if (typeof window === 'undefined') return;
-  
+// Storage keys for localStorage
+const STORAGE_KEYS = {
+  EVENTS: 'events_store_797',
+  PROMO_CODES: 'promo_codes_store_797',
+  BOOKINGS: 'bookings_store_797',
+  SALES_ANALYTICS: 'sales_analytics_store_797'
+};
+
+// Helper functions for localStorage persistence
+function loadFromStorage<T>(key: string, defaultValue: T): T {
+  if (typeof window === 'undefined') return defaultValue;
   try {
-    localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
-    // Trigger storage event for other tabs
-    window.dispatchEvent(new Event('events-updated'));
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
   } catch (error) {
-    console.error('Error saving events to localStorage:', error);
+    console.error(`Error loading from localStorage key ${key}:`, error);
+    return defaultValue;
   }
 }
 
-// Get current events
-let events: EventData[] = getStoredEvents();
-
-export function getEvents(): EventData[] {
-  console.log('getEvents: Starting, getting active events from storage');
-  
-  events = getStoredEvents(); // Refresh from storage
-  const activeEvents = events.filter(event => event.isActive);
-  console.log('getEvents: Active events from storage:', activeEvents.length);
-  console.log('getEvents: Active event details:', activeEvents.map(e => ({ id: e.id, title: e.title, isActive: e.isActive })));
-  return activeEvents;
+function saveToStorage<T>(key: string, data: T): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error(`Error saving to localStorage key ${key}:`, error);
+  }
 }
 
-export function getAllEvents(): EventData[] {
-  events = getStoredEvents(); // Refresh from storage
-  return events;
+// Default events data - empty for production deployment
+// Events will be created through the admin panel
+const defaultEvents: EventData[] = [];
+
+// Load events from localStorage or use default
+let eventsStore: EventData[] = loadFromStorage(STORAGE_KEYS.EVENTS, defaultEvents);
+
+// Frontend function that fetches from API
+export async function getEvents(): Promise<EventData[]> {
+  console.log('getEvents: Fetching active events from API');
+  try {
+    const response = await fetch('/api/admin/events');
+    if (!response.ok) {
+      throw new Error('Failed to fetch events from API');
+    }
+    const data = await response.json();
+    const events = data.events || [];
+
+    // Transform API response to match frontend interface
+    const transformedEvents: EventData[] = events.map((event: any) => ({
+      id: event.id.toString(),
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      time: event.time,
+      venue: event.venue,
+      venueIcon: event.venueIcon || '📍',
+      price: event.price,
+      image: event.image,
+      isActive: event.isActive,
+      passes: event.passes || [],
+      isMultiDay: event.isMultiDay || false,
+      eventDays: event.eventDays || []
+    }));
+
+    console.log('getEvents: Active events found from API:', transformedEvents.length);
+    return transformedEvents;
+  } catch (error) {
+    console.error('getEvents: Error fetching from API, falling back to localStorage:', error);
+    // Fallback to localStorage for error handling
+    const activeEvents = eventsStore.filter(event => event.isActive);
+    console.log('getEvents: Fallback active events found:', activeEvents.length);
+    return activeEvents;
+  }
 }
 
-export function getEventById(id: string): EventData | undefined {
-  return events.find(event => event.id === id);
+export async function getAllEvents(): Promise<EventData[]> {
+  console.log('getAllEvents: Fetching all events from API');
+  try {
+    const response = await fetch('/api/admin/events');
+    if (!response.ok) {
+      throw new Error('Failed to fetch events from API');
+    }
+    const data = await response.json();
+    const events = data.events || [];
+
+    // Transform API response to match frontend interface
+    const transformedEvents: EventData[] = events.map((event: any) => ({
+      id: event.id.toString(),
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      time: event.time,
+      venue: event.venue,
+      venueIcon: event.venueIcon || '📍',
+      price: event.price,
+      image: event.image,
+      isActive: event.isActive,
+      passes: event.passes || [],
+      isMultiDay: event.isMultiDay || false,
+      eventDays: event.eventDays || []
+    }));
+
+    console.log('getAllEvents: Total events found from API:', transformedEvents.length);
+    return transformedEvents;
+  } catch (error) {
+    console.error('getAllEvents: Error fetching from API, falling back to localStorage:', error);
+    // Fallback to localStorage for error handling
+    console.log('getAllEvents: Fallback total events found:', eventsStore.length);
+    return [...eventsStore];
+  }
 }
 
-export function addEvent(event: Omit<EventData, 'id'>): EventData {
-  events = getStoredEvents(); // Refresh from storage
-  const newEvent = {
+export async function getEventById(id: string): Promise<EventData | undefined> {
+  console.log('getEventById: Finding event in memory store:', id);
+  return Promise.resolve(eventsStore.find(event => event.id === id));
+}
+
+export async function addEvent(event: Omit<EventData, 'id'>): Promise<EventData> {
+  console.log('addEvent: Creating new event in memory store');
+  const newEvent: EventData = {
     ...event,
-    id: Date.now().toString()
+    id: Date.now().toString(), // Simple ID generation
   };
-  events.push(newEvent);
-  saveEvents(events); // Save to storage
-  console.log('Data: Event added successfully. Total events:', events.length);
-  console.log('Data: Events after add:', events.map(e => ({ id: e.id, title: e.title })));
-  return newEvent;
-}
 
-export function updateEvent(id: string, updates: Partial<EventData>): EventData | null {
-  events = getStoredEvents(); // Refresh from storage
-  const index = events.findIndex(event => event.id === id);
-  if (index === -1) return null;
-  
-  events[index] = { ...events[index], ...updates };
-  saveEvents(events); // Save to storage
-  return events[index];
-}
+  eventsStore.push(newEvent);
+  saveToStorage(STORAGE_KEYS.EVENTS, eventsStore); // Persist to localStorage
+  console.log('addEvent: Event created successfully:', newEvent.id);
 
-export function deleteEvent(id: string): boolean {
-  console.log('Deleting event with ID:', id);
-  events = getStoredEvents(); // Refresh from storage
-  console.log('Events before deletion:', events.length);
-  const index = events.findIndex(event => event.id === id);
-  if (index === -1) {
-    console.log('Event not found!');
-    return false;
+  // Trigger events-updated event for real-time updates
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('events-updated'));
   }
-  
-  events.splice(index, 1);
-  saveEvents(events); // Save to storage
-  console.log('Events after deletion:', events.length);
-  return true;
+
+  return Promise.resolve(newEvent);
 }
 
-export function cloneEvent(id: string): EventData | null {
-  const originalEvent = events.find(event => event.id === id);
+export async function updateEvent(id: string, updates: Partial<EventData>): Promise<EventData | null> {
+  console.log('updateEvent: Updating event in memory store:', id);
+  const eventIndex = eventsStore.findIndex(event => event.id === id);
+
+  if (eventIndex === -1) {
+    console.log('updateEvent: Event not found:', id);
+    return Promise.resolve(null);
+  }
+
+  // Update the event
+  eventsStore[eventIndex] = { ...eventsStore[eventIndex], ...updates };
+  saveToStorage(STORAGE_KEYS.EVENTS, eventsStore); // Persist to localStorage
+  console.log('updateEvent: Event updated successfully:', id);
+
+  // Trigger events-updated event for real-time updates
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('events-updated'));
+  }
+
+  return Promise.resolve(eventsStore[eventIndex]);
+}
+
+export async function deleteEvent(id: string): Promise<boolean> {
+  console.log('deleteEvent: Deleting event from memory store:', id);
+  const eventIndex = eventsStore.findIndex(event => event.id === id);
+
+  if (eventIndex === -1) {
+    console.log('deleteEvent: Event not found:', id);
+    return Promise.resolve(false);
+  }
+
+  eventsStore.splice(eventIndex, 1);
+  saveToStorage(STORAGE_KEYS.EVENTS, eventsStore); // Persist to localStorage
+  console.log('deleteEvent: Event deleted successfully:', id);
+
+  // Trigger events-updated event for real-time updates
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('events-updated'));
+  }
+
+  return Promise.resolve(true);
+}
+
+export async function cloneEvent(id: string): Promise<EventData | null> {
+  console.log('cloneEvent: Cloning event:', id);
+  const originalEvent = await getEventById(id);
   if (!originalEvent) {
-    console.log('Event not found for cloning:', id);
-    return null;
+    console.log('cloneEvent: Event not found for cloning:', id);
+    return Promise.resolve(null);
   }
 
-  // Create a clone with new ID and updated title
-  const clonedEvent: EventData = {
+  // Create a clone with updated title
+  const clonedEvent: Omit<EventData, 'id'> = {
     ...originalEvent,
-    id: Date.now().toString(),
     title: `${originalEvent.title} (Copy)`,
     passes: originalEvent.passes.map(pass => ({
       ...pass,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+      id: `pass_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     }))
   };
 
-  events.push(clonedEvent);
-  console.log('Event cloned successfully:', clonedEvent.id);
-  return clonedEvent;
+  const newEvent = await addEvent(clonedEvent);
+  console.log('cloneEvent: Event cloned successfully:', newEvent.id);
+  return Promise.resolve(newEvent);
 }
 
-// Debug function to reset events to defaults
-export function resetEventsToDefault(): void {
-  if (typeof window === 'undefined') return;
 
-  console.log('Resetting events to default...');
-  localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(defaultEvents));
-  events = [...defaultEvents];
-  window.dispatchEvent(new Event('events-updated'));
-  console.log('Events reset to default. Total events:', events.length);
+// Analytics and Booking Interfaces
+export interface BookingData {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  passId: string;
+  passName: string;
+  quantity: number;
+  unitPrice: number;
+  totalAmount: number;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  bookingDate: string; // ISO string
+
+  // Referral and commission tracking
+  referralCode?: string;        // Code used for discount
+  influencerId?: string;        // Influencer who gets commission
+  discountAmount?: number;      // Amount discounted (10% of original)
+  originalAmount?: number;      // Price before discount
+  commissionAmount?: number;    // Commission for influencer (10% of original)
+  isInfluencerReferral?: boolean; // True if influencer code, false if admin promo
 }
 
-// Debug function to add test events for carousel testing
-export function addTestEvents(count: number): void {
-  if (typeof window === 'undefined') return;
+export interface SalesData {
+  date: string;
+  tickets: number;
+  revenue: number;
+}
 
-  console.log(`Adding ${count} test events...`);
-  events = getStoredEvents(); // Refresh from storage
+export interface EventAnalytics {
+  eventId: string;
+  eventName: string;
+  totalTickets: number;
+  ticketsSold: number;
+  revenue: number;
+  ticketTypes: {
+    type: string;
+    sold: number;
+    revenue: number;
+  }[];
+}
 
-  for (let i = 1; i <= count; i++) {
-    const testEvent: EventData = {
-      id: `test-${Date.now()}-${i}`,
-      title: `Test Event ${i}`,
-      description: `This is test event number ${i} for carousel testing. Lorem ipsum dolor sit amet.`,
-      date: new Date(Date.now() + i * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // i weeks from now
-      time: '19:00',
-      venue: `Test Venue ${i}`,
-      venueIcon: '🎪',
-      price: 100 + i * 50,
-      image: '/Assets/Passes_outlet design.jpg', // Use existing image
-      isActive: true,
-      passes: [
-        { id: `test-pass-${i}-1`, name: 'Regular', price: 100 + i * 50, available: 100 },
-        { id: `test-pass-${i}-2`, name: 'VIP', price: 200 + i * 100, available: 50 }
-      ]
-    };
-    events.push(testEvent);
+// Analytics functions now use Supabase APIs via admin endpoints
+// Legacy localStorage storage removed for production readiness
+
+// Legacy analytics functions removed - now using Supabase-based analytics via API endpoints
+
+// Promo Code Management
+export interface PromoCode {
+  id: string;
+  code: string;
+  description: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number; // percentage (1-100) or fixed amount
+  minimumAmount?: number; // minimum order amount
+  maxUsage?: number; // maximum number of uses (undefined for unlimited)
+  currentUsage: number; // current number of uses
+  validFrom: string; // ISO date string
+  validUntil: string; // ISO date string
+  isActive: boolean;
+  createdBy: string; // admin email
+  createdAt: string; // ISO date string
+  applicableEvents?: string[]; // event IDs (empty array means all events)
+}
+
+// In-memory promo codes storage with localStorage persistence
+// Promo codes will be created through the admin panel
+let promoCodesStore: PromoCode[] = loadFromStorage(STORAGE_KEYS.PROMO_CODES, []);
+
+export async function getAllPromoCodes(): Promise<PromoCode[]> {
+  try {
+    const response = await fetch('/api/admin/promo-codes');
+    if (!response.ok) throw new Error('Failed to fetch promo codes');
+
+    const data = await response.json();
+    return data.promoCodes || [];
+  } catch (error) {
+    console.error('Error fetching promo codes:', error);
+    return [];
+  }
+}
+
+export async function getActivePromoCodes(): Promise<PromoCode[]> {
+  try {
+    const response = await fetch('/api/admin/promo-codes?active=true');
+    if (!response.ok) throw new Error('Failed to fetch active promo codes');
+
+    const data = await response.json();
+    return data.promoCodes || [];
+  } catch (error) {
+    console.error('Error fetching active promo codes:', error);
+    return [];
+  }
+}
+
+export async function createPromoCode(promoData: Omit<PromoCode, 'id' | 'currentUsage' | 'createdAt'>): Promise<PromoCode> {
+  const newPromo: PromoCode = {
+    ...promoData,
+    id: Date.now().toString(),
+    currentUsage: 0,
+    createdAt: new Date().toISOString()
+  };
+
+  promoCodesStore.push(newPromo);
+  saveToStorage(STORAGE_KEYS.PROMO_CODES, promoCodesStore);
+
+  // Trigger promo codes update event
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('promo-codes-updated'));
   }
 
-  saveEvents(events);
-  console.log(`Added ${count} test events. Total events now:`, events.length);
+  return Promise.resolve(newPromo);
+}
+
+export async function updatePromoCode(id: string, updates: Partial<PromoCode>): Promise<PromoCode | null> {
+  const promoIndex = promoCodesStore.findIndex(promo => promo.id === id);
+
+  if (promoIndex === -1) {
+    return Promise.resolve(null);
+  }
+
+  promoCodesStore[promoIndex] = { ...promoCodesStore[promoIndex], ...updates };
+  saveToStorage(STORAGE_KEYS.PROMO_CODES, promoCodesStore);
+
+  // Trigger promo codes update event
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('promo-codes-updated'));
+  }
+
+  return Promise.resolve(promoCodesStore[promoIndex]);
+}
+
+export async function deletePromoCode(id: string): Promise<boolean> {
+  const promoIndex = promoCodesStore.findIndex(promo => promo.id === id);
+
+  if (promoIndex === -1) {
+    return Promise.resolve(false);
+  }
+
+  promoCodesStore.splice(promoIndex, 1);
+  saveToStorage(STORAGE_KEYS.PROMO_CODES, promoCodesStore);
+
+  // Trigger promo codes update event
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('promo-codes-updated'));
+  }
+
+  return Promise.resolve(true);
+}
+
+export async function validatePromoCode(code: string, eventId: string, orderAmount: number): Promise<{
+  isValid: boolean;
+  promo?: PromoCode;
+  discountAmount?: number;
+  error?: string;
+}> {
+  try {
+    const response = await fetch('/api/validate-promo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, eventId, orderAmount })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { isValid: false, error: data.error || 'Validation failed' };
+    }
+
+    if (data.isValid) {
+      // Transform API response to match frontend interface
+      const promo: PromoCode = {
+        id: data.promo.id,
+        code: data.promo.code,
+        description: data.promo.description || 'Discount code',
+        discountType: data.promo.discountType,
+        discountValue: data.promo.discountValue,
+        minimumAmount: data.promo.minimumAmount,
+        maxUsage: data.promo.maxUsage,
+        currentUsage: data.promo.currentUsage,
+        validFrom: data.promo.validFrom,
+        validUntil: data.promo.validUntil,
+        applicableEvents: [],
+        isActive: true,
+        createdBy: data.promo.createdBy || 'admin',
+        createdAt: data.promo.createdAt || new Date().toISOString()
+      };
+
+      return {
+        isValid: true,
+        promo,
+        discountAmount: data.discountAmount
+      };
+    }
+
+    return { isValid: false, error: data.error };
+  } catch (error) {
+    console.error('Error validating promo code:', error);
+    return { isValid: false, error: 'Validation failed' };
+  }
+}
+
+export async function incrementPromoCodeUsage(id: string): Promise<boolean> {
+  try {
+    const response = await fetch('/api/validate-promo', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ promoCodeId: id })
+    });
+
+    const data = await response.json();
+    return data.success;
+  } catch (error) {
+    console.error('Error incrementing promo code usage:', error);
+    return false;
+  }
+}
+
+// Combined referral validation (for both influencer codes and admin promo codes)
+export async function validateReferralCode(code: string, eventId?: string, orderAmount?: number): Promise<{
+  isValid: boolean;
+  isInfluencerCode?: boolean;
+  influencer?: any; // From userManagement
+  discountPercentage?: number;
+  promo?: PromoCode;
+  discountAmount?: number;
+  error?: string;
+}> {
+  // First, check if it's an admin promo code
+  if (eventId && orderAmount !== undefined) {
+    const promoValidation = await validatePromoCode(code, eventId, orderAmount);
+    if (promoValidation.isValid) {
+      return {
+        isValid: true,
+        isInfluencerCode: false,
+        promo: promoValidation.promo,
+        discountAmount: promoValidation.discountAmount
+      };
+    }
+  }
+
+  // Check if it's an influencer referral code
+  try {
+    // Import userManager dynamically to avoid circular dependencies
+    const { userManager } = await import('@/lib/userManagement');
+    const allUsers = await userManager.getUsers();
+    const influencers = allUsers.filter(user => user.role === 'influencer' && user.is_active);
+
+    // Look for an influencer with this promo code
+    const influencer = influencers.find(inf =>
+      inf.id.slice(-4) === code.toUpperCase().slice(-4) ||
+      `PROMO${inf.id.slice(-4)}` === code.toUpperCase()
+    );
+
+    if (influencer) {
+      const discountPercentage = 10; // Default 10% discount for influencer codes
+      const discountAmount = orderAmount ? Math.round((orderAmount * discountPercentage) / 100) : 0;
+
+      return {
+        isValid: true,
+        isInfluencerCode: true,
+        influencer: {
+          id: influencer.id,
+          name: influencer.full_name,
+          commissionRate: 10
+        },
+        discountPercentage,
+        discountAmount
+      };
+    }
+  } catch (error) {
+    console.error('Error checking influencer codes:', error);
+  }
+
+  return {
+    isValid: false,
+    error: 'Invalid referral code'
+  };
+}
+
+// Utility functions for commission and discount calculations
+export function calculateDiscount(amount: number, discountPercentage: number): { discountAmount: number; finalAmount: number } {
+  const discountAmount = Math.round((amount * discountPercentage) / 100);
+  const finalAmount = amount - discountAmount;
+  return { discountAmount, finalAmount };
+}
+
+export function calculateCommission(originalAmount: number, commissionRate: number): number {
+  return Math.round((originalAmount * commissionRate) / 100);
+}
+
+// Update influencer earnings in the userManagement system
+export async function updateInfluencerEarnings(influencerId: string, commission: number, ticketsSold: number): Promise<void> {
+  try {
+    // Import userManager dynamically to avoid circular dependencies
+    const { userManager } = await import('@/lib/userManagement');
+    const user = await userManager.getUserById(influencerId);
+
+    if (user && user.role === 'influencer') {
+      const currentData = {
+        commissionRate: 10,
+        totalSales: 0,
+        totalRevenue: 0
+      };
+
+      // Update the influencer's earnings
+      const updatedInfluencerData = {
+        ...currentData,
+        totalSales: currentData.totalSales + ticketsSold,
+        totalRevenue: currentData.totalRevenue + commission
+      };
+
+      // Update would need to be implemented with proper influencer data storage
+
+      console.log(`Updated influencer ${influencerId} earnings: +₹${commission}, tickets: +${ticketsSold}`);
+    }
+  } catch (error) {
+    console.error('Error updating influencer earnings:', error);
+  }
+}
+
+// Enhanced referral tracking for individual influencers
+export async function trackReferralUsage(data: {
+  influencerId: string;
+  bookingId: string;
+  eventId: string;
+  eventTitle: string;
+  customerName: string;
+  customerEmail: string;
+  referralCode: string;
+  ticketQuantity: number;
+  originalAmount: number;
+  discountAmount: number;
+  finalAmount: number;
+  commissionAmount: number;
+  passType: string;
+}): Promise<void> {
+  try {
+    // Import both systems
+    const { userManager } = await import('@/lib/userManagement');
+    const { referralTracker } = await import('@/lib/referralTracking');
+
+    const influencer = await userManager.getUserById(data.influencerId);
+
+    if (influencer && influencer.role === 'influencer') {
+      // Record in detailed referral tracking system
+      await referralTracker.trackReferral(
+        data.referralCode,
+        data.bookingId,
+        data.discountAmount
+      );
+      console.log('Referral tracked:', {
+        influencerId: data.influencerId,
+        influencerName: influencer.full_name,
+        referralCode: data.referralCode,
+        bookingId: data.bookingId,
+        eventId: data.eventId,
+        eventTitle: data.eventTitle,
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        ticketQuantity: data.ticketQuantity,
+        originalAmount: data.originalAmount,
+        discountAmount: data.discountAmount,
+        finalAmount: data.finalAmount,
+        commissionAmount: data.commissionAmount,
+        commissionRate: 10,
+        passType: data.passType,
+        bookingDate: new Date().toISOString().split('T')[0]
+      });
+
+      // Also update the user management system
+      await updateInfluencerEarnings(data.influencerId, data.commissionAmount, data.ticketQuantity);
+
+      console.log(`✅ Referral usage tracked for influencer ${influencer.full_name}`);
+    }
+  } catch (error) {
+    console.error('Error tracking referral usage:', error);
+  }
+}
+
+// Legacy functions removed - now using Supabase-based analytics via API endpoints
+// getDashboardKPIs, getBookingsByEventArchival are now handled by /api/admin/analytics
+
+// Calculate trend helper function - can accept array or two numbers
+export function calculateTrend(data: number[] | number, previous?: number): { value: number; isPositive: boolean } {
+  if (Array.isArray(data)) {
+    // If array is provided, calculate trend between last two values
+    if (data.length < 2) return { value: 0, isPositive: true };
+    const current = data[data.length - 1];
+    const prev = data[data.length - 2];
+    if (prev === 0) return { value: 0, isPositive: true };
+    const change = ((current - prev) / prev) * 100;
+    return {
+      value: Math.abs(change),
+      isPositive: change >= 0
+    };
+  } else {
+    // If two numbers are provided
+    if (previous === undefined || previous === 0) return { value: 0, isPositive: true };
+    const change = ((data - previous) / previous) * 100;
+    return {
+      value: Math.abs(change),
+      isPositive: change >= 0
+    };
+  }
 }

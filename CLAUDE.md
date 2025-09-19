@@ -8,8 +8,8 @@ This is **797events**, a Next.js 14 event management platform built with TypeScr
 
 ## Key Requirements Implemented
 
-- **No Prisma, no external DB** - Uses in-memory data storage
-- **Admin credentials**: `the797events@gmail.com` / `Pass@123`
+- **Supabase Database** - Uses Supabase for data storage and authentication
+- **Admin credentials**: Managed through Supabase Auth
 - **Event cards**: Banner on top, info below, price + booking at bottom
 - **Carousel logic**: Single card static display, multiple cards in carousel
 - **Glassmorphism navbar**: Rounded ends, sticky on scroll
@@ -44,15 +44,15 @@ npm run lint
 - `src/lib/` - Utilities for data management and authentication
 
 ### Data Architecture
-- **In-memory data store** (`src/lib/data.ts`) with sample events
-- **Simple authentication** (`src/lib/auth.ts`) with localStorage sessions
-- **No database** - all data stored in JavaScript objects
+- **Supabase Database** (`src/lib/supabase.ts`) with PostgreSQL backend
+- **Supabase Authentication** with role-based access control
+- **Database tables**: events, passes, bookings, users
 
 ### Authentication System
-- Simple email/password authentication (no JWT libraries)
-- Admin credentials: `the797events@gmail.com` / `Pass@123`
-- Session stored in localStorage as base64 encoded JSON
-- Session validation with expiry (24 hours)
+- Supabase Auth with email/password authentication
+- Role-based access control through database
+- Secure session management via Supabase
+- Admin users managed in database
 
 ### Component Architecture
 
@@ -68,9 +68,9 @@ npm run lint
 
 #### Key Features
 - **Single/Multiple Event Logic**: Automatically shows static card for 1 event, carousel for multiple
-- **Admin Dashboard**: Full CRUD operations for events and pass types
-- **Event Management**: Add/edit/delete events with multiple pass types
-- **Pass Management**: Different ticket types (Regular, VIP, etc.) with pricing and availability
+- **Admin Dashboard**: Simplified dashboard with Overview, Events, and Users management
+- **Event Management**: Add/edit/delete events with database persistence
+- **User Management**: Role-based user administration
 
 ### Event Data Structure
 ```typescript
@@ -98,23 +98,22 @@ interface PassType {
 ## Development Workflow
 
 ### Adding New Events
-1. Login as admin (`the797events@gmail.com` / `Pass@123`)
+1. Login as admin via Supabase Auth
 2. Access admin dashboard at `/admin`
-3. Use the event form to add new events
-4. Add multiple pass types with different pricing
-5. Events automatically appear on homepage carousel
+3. Use the event management tab to add new events
+4. Events are stored in Supabase database
+5. Events automatically appear on homepage when active
 
 ### Admin Dashboard Features
-- **Event Form**: Create/edit events with title, description, date, time, venue, pricing, image URL
-- **Pass Management**: Add multiple pass types per event (Regular, VIP, etc.)
-- **Event Status**: Toggle active/inactive status
-- **Event List**: View all events with edit/delete capabilities
+- **Overview Tab**: System analytics and overview
+- **Event Management**: Create/edit/delete events with database persistence
+- **User Management**: Manage user accounts and roles
 
 ### Authentication Flow
 1. User clicks Login in navbar
 2. Redirects to `/login` page
-3. Admin enters credentials (`the797events@gmail.com` / `Pass@123`)
-4. Session stored in localStorage
+3. Admin enters Supabase credentials
+4. Supabase manages secure session
 5. Redirects to `/admin` dashboard
 6. Navbar shows admin user info and sign out option
 
@@ -129,8 +128,8 @@ interface PassType {
 ### State Management
 - No external state management library
 - React useState and useEffect for local state
-- localStorage for authentication persistence
-- In-memory JavaScript objects for data storage
+- Supabase for authentication persistence
+- Database for data storage
 
 ### Event Display Logic
 ```javascript
@@ -140,14 +139,14 @@ interface PassType {
 ```
 
 ### Admin Access Control
-- Simple session validation using `isValidSession()` function
+- Supabase authentication with role validation
 - Admin dashboard redirects to `/login` if not authenticated
-- No complex role management - binary admin/non-admin
+- Role-based access control through database
 
 ## Routes and Navigation
 
 - **`/`** - Homepage with hero section, event carousel, and footer
-- **`/login`** - Admin login page (credentials: the797events@gmail.com / Pass@123)
+- **`/login`** - Admin login page (Supabase authentication)
 - **`/admin`** - Admin dashboard (protected route)
 
 ## Testing and Development
@@ -155,7 +154,7 @@ interface PassType {
 After making changes:
 1. `npm run build` - Verify build succeeds
 2. `npm run dev` - Test in development
-3. Test admin login with correct credentials
+3. Test admin login with Supabase authentication
 4. Verify event creation/editing in admin dashboard
 5. Check event display logic (single vs multiple events)
 
@@ -167,9 +166,9 @@ After making changes:
 - Verify all required dependencies are in package.json
 
 ### Authentication Issues
-- Admin credentials are case-sensitive
-- Clear localStorage if having session issues
-- Check browser console for authentication errors
+- Ensure Supabase environment variables are set
+- Check Supabase project configuration
+- Verify user exists in Supabase auth and has admin role in database
 
 ### Event Display Issues
 - Events must have `isActive: true` to display on homepage

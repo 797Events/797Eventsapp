@@ -55,7 +55,7 @@ export default function TermsAndConditions() {
                 <ul className="space-y-2 pl-6 opacity-90">
                   <li>• Rights of admission are reserved.</li>
                   <li>• The organizer reserves the right to make changes to the event schedule, lineup, or venue if required.</li>
-                  <li>• The organizer's decision on all matters related to the event will be final and binding.</li>
+                  <li>• The organizer&apos;s decision on all matters related to the event will be final and binding.</li>
                 </ul>
               </section>
 

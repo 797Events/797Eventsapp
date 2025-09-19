@@ -2,41 +2,141 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { isValidSession } from '@/lib/auth';
-import ShaderBackground from '@/components/ShaderBackground';
-import GrainyOverlay from '@/components/GrainyOverlay';
-import ShimmerOverlay from '@/components/ShimmerOverlay';
+import { supabase } from '@/lib/supabase';
 
 // Import dashboard components
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import OverviewTab from '@/components/admin/OverviewTab';
-import SalesRevenueTab from '@/components/admin/SalesRevenueTab';
-import InfluencerTab from '@/components/admin/InfluencerTab';
 import EventManagementTab from '@/components/admin/EventManagementTab';
-import SettingsTab from '@/components/admin/SettingsTab';
+import UserManagementTab from '@/components/admin/UserManagementTab';
+import StudentVerificationTab from '@/components/admin/StudentVerificationTab';
+import AttendanceAnalyticsTab from '@/components/admin/AttendanceAnalyticsTab';
 
-export type AdminTab = 'overview' | 'sales' | 'influencer' | 'events' | 'settings';
+export type AdminTab = 'overview' | 'events' | 'users' | 'student-verification' | 'attendance-analytics';
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
-    const session = localStorage.getItem('session');
-    if (session && isValidSession(session)) {
-      setIsAuthenticated(true);
-    } else {
-      router.push('/login');
-    }
-    setLoading(false);
+    const checkAuth = async () => {
+      try {
+        console.log('🔍 Admin dashboard checking authentication...');
+
+        // First check new JWT-based auth
+        const token = localStorage.getItem('auth_token');
+        const userStr = localStorage.getItem('auth_user');
+
+        if (token && userStr) {
+          try {
+            const userData = JSON.parse(userStr);
+            console.log('📊 Found JWT session data:', userData);
+
+            if (userData.role === 'admin') {
+              console.log('✅ Valid admin JWT session found');
+              setCurrentUser({
+                id: userData.id,
+                email: userData.email,
+                name: userData.name,
+                role: 'admin'
+              });
+              setIsAuthenticated(true);
+              setLoading(false);
+              return;
+            } else {
+              console.log('❌ User is not admin:', userData.role);
+            }
+          } catch (e) {
+            console.log('❌ Failed to parse JWT user data');
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+          }
+        }
+
+        // Fallback: Check Supabase auth (legacy)
+        const { data: { user }, error } = await supabase.auth.getUser();
+
+        if (!error && user) {
+          // Check if user is admin in Supabase
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+          if (!userError && userData && userData.role === 'admin') {
+            setCurrentUser({ id: user.id, email: user.email, role: 'admin' });
+            setIsAuthenticated(true);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Fallback: Check temporary session for demo/testing
+        const tempSession = localStorage.getItem('temp_admin_session');
+        if (tempSession) {
+          try {
+            const session = JSON.parse(tempSession);
+            if (session.expires_at > Date.now() && session.role === 'admin') {
+              setCurrentUser({
+                id: session.user.id,
+                email: session.user.email,
+                role: 'admin'
+              });
+              setIsAuthenticated(true);
+              setLoading(false);
+              return;
+            } else {
+              // Session expired, remove it
+              localStorage.removeItem('temp_admin_session');
+            }
+          } catch (e) {
+            localStorage.removeItem('temp_admin_session');
+          }
+        }
+
+        // No valid authentication found
+        console.log('❌ No valid admin session found, redirecting to login');
+        router.push('/login');
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        router.push('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, [router]);
 
-  const handleSignOut = () => {
-    localStorage.removeItem('session');
-    router.push('/');
+  const handleSignOut = async () => {
+    try {
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+
+      // Clear all session data (both old and new formats)
+      localStorage.removeItem('temp_admin_session');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('session');
+
+      console.log('✅ Successfully signed out, cleared all session data');
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Even if Supabase sign out fails, clear all sessions and redirect
+      localStorage.removeItem('temp_admin_session');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('session');
+
+      console.log('🔄 Cleared session data after error');
+      router.push('/login');
+    }
   };
 
   if (loading) {
@@ -55,25 +155,21 @@ export default function AdminDashboard() {
     switch (activeTab) {
       case 'overview':
         return <OverviewTab />;
-      case 'sales':
-        return <SalesRevenueTab />;
-      case 'influencer':
-        return <InfluencerTab />;
       case 'events':
         return <EventManagementTab />;
-      case 'settings':
-        return <SettingsTab />;
+      case 'users':
+        return <UserManagementTab currentUserRole={currentUser?.role || 'admin'} />;
+      case 'student-verification':
+        return <StudentVerificationTab />;
+      case 'attendance-analytics':
+        return <AttendanceAnalyticsTab />;
       default:
         return <OverviewTab />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-950 via-violet-950 via-purple-900 to-indigo-950 relative overflow-hidden">
-      <ShaderBackground />
-      <GrainyOverlay />
-      <ShimmerOverlay />
-      
+    <div className="min-h-screen bg-slate-900 relative overflow-hidden">
       <div className="relative z-10 flex h-screen">
         {/* Sidebar */}
         <AdminSidebar

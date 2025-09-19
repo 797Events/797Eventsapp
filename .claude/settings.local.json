@@ -25,7 +25,19 @@
       "Bash(git remote add:*)",
       "Bash(gh:*)",
       "Bash(git commit:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:www.boutiqueweddings.cz)",
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(printf \"\\n\")",
+      "Bash(npm cache clean:*)",
+      "Bash(taskkill:*)",
+      "Read(//e/**)",
+      "Bash(node:*)",
+      "Bash(git log:*)",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

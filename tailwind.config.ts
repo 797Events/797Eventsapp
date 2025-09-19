@@ -9,9 +9,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        'poppins': ['Poppins', 'sans-serif'],
-        'montserrat': ['Montserrat', 'sans-serif'],
-        'sans': ['Poppins', 'sans-serif'],
+        'poppins': ['var(--font-poppins)', 'sans-serif'],
+        'montserrat': ['var(--font-montserrat)', 'sans-serif'],
+        'sans': ['var(--font-poppins)', 'sans-serif'],
       },
     },
   },

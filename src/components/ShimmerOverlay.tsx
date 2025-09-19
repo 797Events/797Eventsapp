@@ -260,6 +260,7 @@ export default function ShimmerOverlay({ className = '' }: ShimmerOverlayProps) 
         style.remove();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
