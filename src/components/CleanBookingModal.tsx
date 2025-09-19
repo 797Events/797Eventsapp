@@ -248,11 +248,21 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
     if (!event) return;
 
     const availablePasses = getAvailablePasses();
+    console.log('Pass selection effect:', {
+      selectedDay: bookingForm.selectedDay,
+      availablePasses: availablePasses.length,
+      currentPassType: bookingForm.passType
+    });
+
     if (availablePasses.length > 0) {
-      setBookingForm(prev => ({
-        ...prev,
-        passType: availablePasses[0].id
-      }));
+      // Only update if current pass type is not valid for new day
+      const currentPassValid = availablePasses.find(pass => pass.id === bookingForm.passType);
+      if (!currentPassValid) {
+        setBookingForm(prev => ({
+          ...prev,
+          passType: availablePasses[0].id
+        }));
+      }
     } else {
       // Clear pass type if no passes available for selected day
       setBookingForm(prev => ({
@@ -367,6 +377,19 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
       return;
     }
 
+    // Check if we have valid passes available
+    const availablePassesForSubmit = getAvailablePasses();
+    if (availablePassesForSubmit.length === 0) {
+      setValidationErrors(['No passes available for the selected event/day']);
+      return;
+    }
+
+    // Check if selected pass type is valid
+    if (!bookingForm.passType || !availablePassesForSubmit.find(pass => pass.id === bookingForm.passType)) {
+      setValidationErrors(['Please select a valid pass type']);
+      return;
+    }
+
     // Check if student verification is required
     if (promoValidation.isValid &&
         promoValidation.type === 'student_promo' &&
@@ -381,6 +404,12 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
     try {
       const selectedPass = availablePasses.find(pass => pass.id === bookingForm.passType);
       if (!selectedPass) {
+        console.error('Pass selection error:', {
+          selectedPassType: bookingForm.passType,
+          availablePasses: availablePasses,
+          selectedDay: bookingForm.selectedDay,
+          isMultiDay: event.isMultiDay
+        });
         throw new Error('Please select a valid pass type');
       }
 

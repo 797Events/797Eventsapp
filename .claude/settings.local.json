@@ -37,7 +37,8 @@
       "Bash(node:*)",
       "Bash(git log:*)",
       "Bash(timeout 10 npm run dev)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(timeout 30 npm run dev)"
     ],
     "deny": [],
     "ask": []

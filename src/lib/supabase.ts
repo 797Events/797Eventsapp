@@ -72,7 +72,8 @@ export interface DatabaseUser {
   email: string;
   full_name: string;
   phone?: string;
-  role: 'admin' | 'customer';
+  password_hash?: string;
+  role: 'admin' | 'customer' | 'guard' | 'influencer';
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -130,7 +131,8 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE NOT NULL,
   full_name VARCHAR(255) NOT NULL,
   phone VARCHAR(20),
-  role VARCHAR(20) DEFAULT 'customer' CHECK (role IN ('admin', 'customer')),
+  password_hash VARCHAR(255),
+  role VARCHAR(20) DEFAULT 'customer' CHECK (role IN ('admin', 'customer', 'guard', 'influencer')),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
