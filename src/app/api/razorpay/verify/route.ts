@@ -47,6 +47,12 @@ export async function POST(request: NextRequest) {
     const booking_id = `booking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const ticket_id = `TKT${Date.now().toString().slice(-8)}${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
 
+    // Calculate consistent amounts for booking and ticket
+    const paymentAmountRupees = Number(payment.amount) / 100; // Convert paise to rupees
+    const originalAmount = Number(discountDetails?.originalAmount) || paymentAmountRupees;
+    const discountAmount = Number(discountDetails?.discountAmount) || 0;
+    const finalTotalAmount = Math.max(0, originalAmount - discountAmount);
+
     // Save booking to database
     const { unifiedDb } = await import('@/lib/unifiedDatabase');
 
@@ -67,13 +73,13 @@ export async function POST(request: NextRequest) {
         customerName: customerDetails?.name || 'Unknown Customer',
         customerEmail: customerDetails?.email || 'unknown@email.com',
         customerPhone: customerDetails?.phone || 'N/A',
-        quantity: eventDetails?.quantity || 1,
-        totalAmount: Number(payment.amount) / 100,
+        quantity: Number(eventDetails?.quantity) || 1,
+        totalAmount: finalTotalAmount,
         paymentId: razorpay_payment_id,
         bookingStatus: 'confirmed' as const,
         referralCode: discountDetails?.referralCode,
-        discountAmount: discountDetails?.discountAmount,
-        originalAmount: discountDetails?.originalAmount
+        discountAmount: discountAmount,
+        originalAmount: originalAmount
       });
 
       if (booking) {
@@ -171,10 +177,10 @@ export async function POST(request: NextRequest) {
           customerEmail: customerDetails?.email || 'unknown@email.com',
           customerPhone: customerDetails?.phone || '',
           passType: eventDetails?.passType || 'Standard',
-          quantity: eventDetails?.quantity || 1,
-          totalAmount: Number(payment.amount) / 100,
-          originalAmount: discountDetails?.originalAmount || Number(payment.amount) / 100,
-          discountAmount: discountDetails?.discountAmount || 0,
+          quantity: Number(eventDetails?.quantity) || 1,
+          totalAmount: finalTotalAmount,
+          originalAmount: originalAmount,
+          discountAmount: discountAmount,
           referralCode: discountDetails?.referralCode || '',
           eventId: eventDetails?.id,
           passId: passId,
@@ -237,7 +243,7 @@ export async function POST(request: NextRequest) {
             eventVenue: enhancedTicketData.eventVenue || 'TBD',
             passType: enhancedTicketData.passType || 'Standard',
             quantity: enhancedTicketData.quantity || 1,
-            totalAmount: Number(payment.amount) / 100,
+            totalAmount: finalTotalAmount,
             bookingId: booking
           }, ticketPDFBuffer);
           console.log('📧 Ticket email sent successfully');
@@ -252,7 +258,7 @@ export async function POST(request: NextRequest) {
           ticket_id: ticket_id,
           payment_id: razorpay_payment_id,
           order_id: razorpay_order_id,
-          amount: Number(payment.amount) / 100,
+          amount: finalTotalAmount,
           currency: payment.currency,
           email_sent: emailSent,
           pdf_generated: true,

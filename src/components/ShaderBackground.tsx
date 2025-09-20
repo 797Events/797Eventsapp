@@ -116,8 +116,8 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
           vec3 c2 = rgb(u_color2.r, u_color2.g, u_color2.b);
           vec3 bgMain = rgb(u_bgMain.r, u_bgMain.g, u_bgMain.b);
 
-          float noise1 = snoise(vUv + u_time * 0.2);
-          float noise2 = snoise(vUv * 1.0 + u_time * 0.2);
+          float noise1 = snoise(vUv + u_time * 0.06); // Reduced from 0.2 to 0.06 (70% slower)
+          float noise2 = snoise(vUv * 1.0 + u_time * 0.06); // Reduced from 0.2 to 0.06 (70% slower)
 
           vec3 color = bg;
           color = mix(color, c1, noise1 * 0.008);
@@ -237,8 +237,8 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
         }
       }
 
-      j = j + 0.01;
-      t = t + 0.05;
+      j = j + 0.003; // Reduced from 0.01 to 0.003 (70% slower)
+      t = t + 0.015; // Reduced from 0.05 to 0.015 (70% slower)
 
       renderer.render(scene, camera);
       animationRef.current = window.requestAnimationFrame(tick);

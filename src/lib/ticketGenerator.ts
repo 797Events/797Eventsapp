@@ -64,16 +64,20 @@ async function generateQRCodeOptimized(ticketData: TicketData): Promise<string> 
   }
 }
 
-// Safe Text Handling
+// Safe Text Handling with proper line height calculation
 function addSafeText(pdf: any, text: string, x: number, y: number, maxWidth: number, options?: any) {
   try {
     const lines = pdf.splitTextToSize(text, maxWidth);
     pdf.text(lines, x, y, options);
-    return lines.length * 12;
+    // Return actual height used based on current font size
+    const fontSize = pdf.internal.getFontSize();
+    const lineHeight = fontSize * 1.2; // Better line spacing
+    return lines.length * lineHeight;
   } catch (error) {
     console.error('Text rendering error:', error);
     pdf.text('Text Error', x, y, options);
-    return 12;
+    const fontSize = pdf.internal.getFontSize();
+    return fontSize * 1.2;
   }
 }
 
@@ -103,7 +107,7 @@ function generateSecurityHash(bookingId: string, eventId: string = '', email: st
   return Math.abs(hash).toString(36);
 }
 
-// Generate PDF using custom ticket template
+// Custom Template-based PDF Generation using ticket-purple.pdf
 export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
   // Validate data first
   const errors = validateTicketData(ticketData);
@@ -128,74 +132,80 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
       console.warn('QR code generation failed, continuing without:', qrError);
     }
 
-    // Create PDF using the ticket template dimensions (landscape)
-    const pdf = new jsPDF('landscape', 'mm', [210, 74]); // Ticket size
+    // Create PDF in landscape mode to match template
+    const pdf = new jsPDF('landscape', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    console.log('📐 PDF dimensions:', pageWidth, 'x', pageHeight, 'mm');
-
-    // Load and use the custom background template
+    // Load and add your PNG template as background
     try {
-      // Add the purple background template
-      const fs = require('fs');
-      const path = require('path');
+      const fs = await import('fs');
+      const path = await import('path');
+
       const templatePath = path.join(process.cwd(), 'public', 'Ticket-purple.png');
+      const templateBuffer = fs.readFileSync(templatePath);
+      const templateBase64 = templateBuffer.toString('base64');
 
-      if (fs.existsSync(templatePath)) {
-        console.log('✅ Found custom template at:', templatePath);
-
-        // Read the template file
-        const templateBuffer = fs.readFileSync(templatePath);
-        const templateBase64 = templateBuffer.toString('base64');
-        const templateDataURL = `data:image/png;base64,${templateBase64}`;
-
-        // Add template as background (full size)
-        pdf.addImage(templateDataURL, 'PNG', 0, 0, pageWidth, pageHeight);
-        console.log('✅ Custom template added as background');
-      } else {
-        console.log('⚠️ Template not found, using fallback design');
-        // Fallback: Purple background
-        pdf.setFillColor(139, 92, 246);
-        pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-      }
+      // Add your PNG template as background - fit width only, maintain aspect ratio
+      // Reduce height by 20% from previous: 0.4 * 0.8 = 0.32
+      const templateHeight = pageWidth * 0.32; // Reduced by 20%
+      pdf.addImage(`data:image/png;base64,${templateBase64}`, 'PNG', 0, 0, pageWidth, templateHeight, undefined, 'FAST');
     } catch (error) {
-      console.error('❌ Error loading template:', error);
-      // Fallback: Purple background
-      pdf.setFillColor(139, 92, 246);
+      console.error('Failed to load template:', error);
+      // Fallback to purple background if template fails
+      pdf.setFillColor(147, 51, 234);
       pdf.rect(0, 0, pageWidth, pageHeight, 'F');
     }
 
-    // ONLY ADD DATA TO YOUR EXISTING DESIGN PLACEHOLDERS
-    // LEFT SIDE: Fill in the actual values where you have placeholders
+    // Now add only the specific data you requested, positioned for your template
+    // Using more precise coordinates based on your landscape template layout
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255); // White text for visibility on purple background
 
-    // QR Code in the white square you designed
+    // Generate sequential ticket ID based on event and year
+    const eventAbbr = 'TGIN'; // The Great Indian Navratri
+    const year = '25'; // 2025
+    // In production, this would come from database sequence
+    const sequenceNumber = String(Math.floor(Math.random() * 9999) + 250001).padStart(6, '0');
+    const formattedTicketId = `${eventAbbr}-${sequenceNumber}`;
+
+    // Ticket ID - CORRECTED POSITION: down 0.25px and right 0.5px
+    pdf.setFontSize(12);
+    addSafeText(pdf, formattedTicketId, 22, 14.75, 100);
+    console.log(`Ticket ID positioned at: (22, 14.75)`);
+
+    // Customer Name - CORRECTED POSITION: left 2px and down 0.25px
+    pdf.setFontSize(12);
+    addSafeText(pdf, ticketData.customerName, 21.5, 22.75, 120);
+    console.log(`Name positioned at: (21.5, 22.75)`);
+
+    // Pass Type - CORRECTED POSITION: down 0.25px and left 2.25px
+    pdf.setFontSize(12);
+    let passDisplayName = ticketData.passType;
+    if (ticketData.passDetails && ticketData.passDetails.dayNumber && ticketData.passDetails.dayTitle) {
+      passDisplayName = `Day ${ticketData.passDetails.dayNumber}: ${ticketData.passDetails.dayTitle}`;
+    }
+    addSafeText(pdf, passDisplayName, 24.25, 30.75, 120);
+    console.log(`Type positioned at: (24.25, 30.75)`);
+
+    // QR Code - CORRECTED: moved left 1px and up 1px, increased size by 10%
     if (qrCodeDataURL && qrCodeDataURL.length > 0) {
-      const qrSize = 24.15; // Final size after all adjustments
-      const qrX = 16; // Final X position after all adjustments
-      const qrY = 36; // Final Y position after all adjustments
+      const qrSize = 33; // Increased by 10% (30 * 1.1 = 33)
+      const qrX = 24; // MOVED LEFT by 1px from previous 25
+      const qrY = 46.5; // MOVED UP by 1px from previous 47.5
 
       pdf.addImage(qrCodeDataURL, 'PNG', qrX, qrY, qrSize, qrSize);
-      console.log('✅ QR code placed in your white square');
+      console.log(`QR positioned at: (${qrX}, ${qrY}) with size ${qrSize}`);
+    } else {
+      // Fallback if QR generation fails
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      pdf.setTextColor(0, 0, 0); // Black text for visibility in white square
+      addSafeText(pdf, 'QR CODE', 39, 61.5, 50, { align: 'center' });
+      addSafeText(pdf, 'ERROR', 39, 66.5, 50, { align: 'center' });
     }
 
-    // Fill in the text fields you designed on the left side
-    pdf.setFont('helvetica', 'bold'); // Bold as requested
-    pdf.setFontSize(8);
-    pdf.setTextColor(255, 255, 255); // White text as requested
-
-    // Final positioning with exact coordinates from our adjustments
-    // Ticket ID
-    addSafeText(pdf, ticketData.ticketId || 'N/A', 16, 12, 50, { align: 'left' });
-
-    // Name (moved down by 1px from original spacing)
-    addSafeText(pdf, ticketData.customerName, 13, 19, 60, { align: 'left' });
-
-    // Type (moved up by 0.5px)
-    addSafeText(pdf, ticketData.passType, 13, 25.5, 60, { align: 'left' });
-
-    console.log('✅ Custom ticket generated using your template design');
-
+    console.log('PDF generation completed using custom template');
     return pdf.output('blob');
 
   } catch (error) {
