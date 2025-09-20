@@ -157,22 +157,22 @@ export async function GET(request: NextRequest) {
     // Check-in patterns (hourly distribution)
     const hourlyDistribution = Array.from({ length: 24 }, (_, hour) => ({
       hour,
-      count: attendanceData.filter(record => {
-        const checkInHour = new Date(record.check_in_time).getHours();
+      count: attendanceData?.filter(record => {
+        const checkInHour = new Date(record.scanned_at).getHours();
         return checkInHour === hour;
-      }).length
+      })?.length || 0
     }));
 
     // Top attendees
     const attendeeFrequency: { [userId: string]: { count: number; user: any } } = {};
-    attendanceData.forEach(record => {
-      if (!attendeeFrequency[record.user_id]) {
-        attendeeFrequency[record.user_id] = {
+    attendanceData?.forEach(record => {
+      if (!attendeeFrequency[record.customer_email]) {
+        attendeeFrequency[record.customer_email] = {
           count: 0,
-          user: record.users
+          user: { name: record.customer_name, email: record.customer_email }
         };
       }
-      attendeeFrequency[record.user_id].count++;
+      attendeeFrequency[record.customer_email].count++;
     });
 
     const topAttendees = Object.entries(attendeeFrequency)
@@ -196,15 +196,15 @@ export async function GET(request: NextRequest) {
       attendanceTrends,
       hourlyDistribution,
       topAttendees,
-      recentAttendance: attendanceData.slice(0, 20).map(record => ({
+      recentAttendance: attendanceData?.slice(0, 20)?.map(record => ({
         id: record.id,
         eventTitle: (record.events as any)?.title || 'Unknown Event',
-        attendeeName: (record.users as any)?.full_name || 'Unknown',
-        attendeeEmail: (record.users as any)?.email || '',
-        checkInTime: record.check_in_time,
-        checkOutTime: record.check_out_time,
-        status: record.attendance_status
-      })),
+        attendeeName: record.customer_name || 'Unknown',
+        attendeeEmail: record.customer_email || '',
+        checkInTime: record.scanned_at,
+        guardName: record.guard_name,
+        location: record.scan_location
+      })) || [],
       timeRange
     };
 

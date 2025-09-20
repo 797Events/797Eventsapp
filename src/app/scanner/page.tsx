@@ -367,7 +367,7 @@ export default function QRScanner() {
     localStorage.removeItem('scanner_auth');
     localStorage.removeItem('guard_info');
     setIsAuthenticated(false);
-    setPassword('');
+    // setPassword(''); // Removed - password state not used
     setIsScanning(false);
     setScanResult(null);
     if (scannerRef.current) {
