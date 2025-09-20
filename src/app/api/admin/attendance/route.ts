@@ -24,22 +24,87 @@ export async function GET(request: NextRequest) {
         startDate.setDate(endDate.getDate() - 30);
     }
 
-    // Get attendance records
-    const { data: attendanceData, error: attendanceError } = await supabase
-      .from('attendance')
+    // Get attendance records - try attendance_logs first, then fall back to attendance
+    let attendanceQuery = supabase
+      .from('attendance_logs')
       .select(`
         id,
         event_id,
-        user_id,
-        check_in_time,
-        check_out_time,
-        attendance_status,
-        events(title, event_date),
-        users(full_name, email)
+        booking_id,
+        customer_name,
+        customer_email,
+        scanned_at,
+        scanned_by,
+        guard_name,
+        scan_location,
+        ticket_id,
+        events(title, date)
       `)
-      .gte('check_in_time', startDate.toISOString())
-      .lte('check_in_time', endDate.toISOString())
-      .order('check_in_time', { ascending: false });
+      .gte('scanned_at', startDate.toISOString())
+      .lte('scanned_at', endDate.toISOString())
+      .order('scanned_at', { ascending: false });
+
+    let { data: attendanceData, error: attendanceError } = await attendanceQuery;
+
+    // If attendance_logs doesn't exist, try the old attendance table
+    if (attendanceError && (
+      attendanceError.code === 'PGRST205' ||
+      attendanceError.code === 'PGRST200' ||
+      attendanceError.message.includes('attendance_logs') ||
+      attendanceError.message.includes('attendance') ||
+      attendanceError.message.includes('schema cache') ||
+      attendanceError.message.includes('relationship'))) {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('attendance')
+        .select(`
+          id,
+          event_id,
+          user_id,
+          check_in_time,
+          check_out_time,
+          attendance_status,
+          events(title, event_date),
+          users(full_name, email)
+        `)
+        .gte('check_in_time', startDate.toISOString())
+        .lte('check_in_time', endDate.toISOString())
+        .order('check_in_time', { ascending: false });
+
+      if (fallbackError) {
+        console.error('Error fetching attendance:', fallbackError);
+        // Return empty data if neither table exists
+        return NextResponse.json({
+          attendanceRecords: [],
+          analytics: {
+            totalAttendance: 0,
+            totalEvents: 0,
+            averageAttendancePerEvent: 0,
+            topPerformingEvents: [],
+            attendanceByDate: [],
+            attendanceByGuard: []
+          }
+        });
+      }
+
+      // Transform fallback data to match expected structure
+      attendanceData = fallbackData?.map((record: any) => ({
+        id: record.id,
+        event_id: record.event_id,
+        booking_id: record.user_id, // Map user_id to booking_id
+        customer_name: record.users?.[0]?.full_name || 'Unknown',
+        customer_email: record.users?.[0]?.email || 'unknown@example.com',
+        scanned_at: record.check_in_time,
+        scanned_by: 'System',
+        guard_name: 'Security Guard',
+        scan_location: 'Event Entrance',
+        ticket_id: `TICKET_${record.id}`,
+        events: record.events?.map((event: any) => ({
+          title: event.title,
+          date: event.event_date
+        })) || []
+      })) || [];
+      attendanceError = fallbackError;
+    }
 
     if (attendanceError) {
       console.error('Error fetching attendance:', attendanceError);
@@ -59,26 +124,26 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate analytics
-    const totalAttendees = attendanceData.length;
-    const uniqueAttendees = new Set(attendanceData.map(a => a.user_id)).size;
+    const totalAttendees = attendanceData?.length || 0;
+    const uniqueAttendees = new Set(attendanceData?.map(a => a.customer_email) || []).size;
     const averageAttendancePerEvent = eventsData.length > 0 ? totalAttendees / eventsData.length : 0;
 
     // Attendance by event
     const attendanceByEvent = eventsData.map(event => {
-      const eventAttendance = attendanceData.filter(a => a.event_id === event.id);
+      const eventAttendance = attendanceData?.filter(a => a.event_id === event.id) || [];
       return {
         eventId: event.id,
         eventTitle: event.title,
         eventDate: event.event_date,
         attendeeCount: eventAttendance.length,
-        uniqueAttendees: new Set(eventAttendance.map(a => a.user_id)).size
+        uniqueAttendees: new Set(eventAttendance.map(a => a.customer_email)).size
       };
     });
 
     // Attendance trends (by day)
     const attendanceByDay: { [date: string]: number } = {};
-    attendanceData.forEach(record => {
-      const date = new Date(record.check_in_time).toISOString().split('T')[0];
+    attendanceData?.forEach(record => {
+      const date = new Date(record.scanned_at).toISOString().split('T')[0];
       attendanceByDay[date] = (attendanceByDay[date] || 0) + 1;
     });
 

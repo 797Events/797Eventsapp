@@ -43,7 +43,7 @@ export default function StudentVerificationUpload({
       setPreviewUrl(reader.result as string);
     };
     reader.readAsDataURL(file);
-    setIsUploading(true);
+    setIsUploading(false); // Don't set uploading state until verification starts
   };
 
   const handleVerifyID = async () => {

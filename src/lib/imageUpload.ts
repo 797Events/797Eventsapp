@@ -7,7 +7,7 @@ export interface UploadResponse {
   error?: string;
 }
 
-const IMGBB_API_KEY = 'b1f6e5c8e7a9b4c2d3f8e6b1a4d5c7f2'; // Free demo key - replace with your own
+const IMGBB_API_KEY = process.env.IMGBB_API_KEY || ''; // Set in .env.local
 const IMGBB_API_URL = 'https://api.imgbb.com/1/upload';
 
 export async function uploadImage(file: File): Promise<UploadResponse> {
@@ -19,6 +19,11 @@ export async function uploadImage(file: File): Promise<UploadResponse> {
 
     if (file.size > 32 * 1024 * 1024) { // 32MB ImgBB limit
       return { success: false, error: 'Image size must be less than 32MB' };
+    }
+
+    // If no API key configured, use fallback
+    if (!IMGBB_API_KEY) {
+      return uploadImageFallback(file);
     }
 
     // Convert file to base64

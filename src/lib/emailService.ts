@@ -24,7 +24,7 @@ export interface BookingConfirmationData {
 
 export async function sendBookingConfirmation(data: BookingConfirmationData, ticketPDF?: Blob): Promise<boolean> {
   try {
-    console.log('📧 Preparing to send booking confirmation email to:', data.customerEmail);
+    // Preparing booking confirmation email
 
     const emailHtml = generateBookingConfirmationHTML(data);
 
@@ -33,7 +33,7 @@ export async function sendBookingConfirmation(data: BookingConfirmationData, tic
     if (ticketPDF) {
       const arrayBuffer = await ticketPDF.arrayBuffer();
       pdfBuffer = Buffer.from(arrayBuffer);
-      console.log('🎫 PDF converted to buffer, size:', pdfBuffer.length, 'bytes');
+      // PDF attached to email
     }
 
     // Use real SMTP service
@@ -65,8 +65,7 @@ export async function sendBookingConfirmation(data: BookingConfirmationData, tic
 
     // Send email
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully:', info.messageId);
-    console.log('📧 Email sent to:', data.customerEmail);
+    // Email sent successfully
 
     return true;
   } catch (error) {
@@ -145,16 +144,41 @@ function generateBookingConfirmationHTML(data: BookingConfirmationData): string 
 
 export async function sendEmail(emailData: EmailData): Promise<boolean> {
   try {
-    // In production, integrate with email service provider
-    console.log('Email would be sent:', {
-      to: emailData.to,
-      subject: emailData.subject,
-      hasAttachments: emailData.attachments ? emailData.attachments.length : 0
+    const nodemailer = require('nodemailer');
+
+    // Create transporter with environment-configured SMTP
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
     });
 
+    // Prepare attachments
+    const attachments = emailData.attachments ? await Promise.all(
+      emailData.attachments.map(async (att) => ({
+        filename: att.filename,
+        content: Buffer.from(await att.content.arrayBuffer()),
+        contentType: att.contentType
+      }))
+    ) : [];
+
+    // Send email
+    const info = await transporter.sendMail({
+      from: `"797 Events" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+      to: emailData.to,
+      subject: emailData.subject,
+      html: emailData.html,
+      attachments
+    });
+
+    // Email sent successfully
     return true;
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('❌ Error sending email:', error);
     return false;
   }
 }

@@ -63,21 +63,12 @@ export default function InfluencerDashboard() {
         // Load detailed analytics from referral tracking system
         const analytics = await referralTracker.getInfluencerAnalytics(userId);
 
-        // If no real data exists, use mock data for demo
+        // Use real analytics data
         let stats = analytics;
-        if (analytics.totalReferrals === 0) {
-
-          stats = {
-            totalReferrals: 10,
-            totalCommission: 2500,
-            pendingCommission: 1000,
-            paidCommission: 1500
-          };
-        }
 
         setInfluencerStats({
           totalSales: stats.totalReferrals,
-          commission: stats.totalCommission,
+          commission: stats.totalRevenue,
           conversionRate: 15,
           totalClicks: Math.round(stats.totalReferrals * 4),
           activePromos: 1,
@@ -98,23 +89,30 @@ export default function InfluencerDashboard() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const sessionToken = localStorage.getItem('session');
-        if (sessionToken) {
-          const { isValidSession, decodeSession } = await import('@/lib/auth');
-          if (isValidSession(sessionToken)) {
-            const user = decodeSession(sessionToken);
+        const userToken = localStorage.getItem('auth_token');
+        const userData = localStorage.getItem('auth_user');
+
+        if (userToken && userData) {
+          const { isValidSession } = await import('@/lib/auth');
+          if (isValidSession(userToken)) {
+            const user = JSON.parse(userData);
             if (user && user.role === 'influencer') {
               setInfluencerData(user);
               setIsAuthenticated(true);
               // Load real influencer stats
               await loadInfluencerStats(user.email);
             } else {
-              // Not an influencer or invalid role
-              router.push('/login');
+              // Not an influencer - redirect based on role
+              if (user.role === 'admin') {
+                router.push('/admin');
+              } else if (user.role === 'guard') {
+                router.push('/guard-dashboard');
+              } else {
+                router.push('/login');
+              }
             }
           } else {
             // Invalid session
-            localStorage.removeItem('session');
             router.push('/login');
           }
         } else {
@@ -377,7 +375,7 @@ export default function InfluencerDashboard() {
               <BarChart3 size={24} className="text-white/60" />
             </div>
 
-            <ReferralHistory influencerId={influencerData?.id || 'demo'} />
+            <ReferralHistory influencerId={influencerData?.id || 'unknown'} />
           </LuxuryCard>
         </div>
       </div>

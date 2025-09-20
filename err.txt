@@ -1,0 +1,36 @@
+
+
+1 of 4 errors
+Next.js (14.2.32) is outdated (learn more)
+
+Unhandled Runtime Error
+ReferenceError: studentVerificationId is not defined
+
+Source
+src\components\CleanBookingModal.tsx (865:32) @ studentVerificationId
+
+  863 |                                 {promoValidation.requiresVerification && ' (ID verification required)'}
+  864 |                               </p>
+> 865 |                               {studentVerificationId === 'verified' && (
+      |                                ^
+  866 |                                 <p className="text-blue-400 mt-1">✅ Student ID verified!</p>
+  867 |                               )}
+  868 |                             </div>
+Call Stack
+Show collapsed frames
+
+nhandled Runtime Error
+ReferenceError: studentVerificationId is not defined
+
+Source
+src\components\CleanBookingModal.tsx (872:32) @ studentVerificationId
+
+  870 |                                 {promoValidation.requiresVerification && ' (ID verification required)'}
+  871 |                               </p>
+> 872 |                               {studentVerificationId === 'verified' && (
+      |                                ^
+  873 |                                 <p className="text-blue-400 mt-1">✅ Student ID verified!</p>
+  874 |                               )}
+  875 |                             </div>
+Call Stack
+

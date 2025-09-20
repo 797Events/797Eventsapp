@@ -34,6 +34,16 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching student verifications:', error);
+      // Return empty data if table doesn't exist yet
+      if (error.code === 'PGRST205' ||
+          error.message.includes('student_verifications') ||
+          error.message.includes('does not exist') ||
+          error.message.includes('schema cache')) {
+        return NextResponse.json({
+          verifications: [],
+          stats: { total: 0, pending: 0, approved: 0, rejected: 0 }
+        });
+      }
       return NextResponse.json({ error: 'Failed to fetch verifications' }, { status: 500 });
     }
 

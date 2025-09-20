@@ -35,27 +35,15 @@ export default function ReferralHistory({ influencerId }: ReferralHistoryProps) 
       const influencerStats = await getInfluencerStats(influencerId);
       setStats(influencerStats);
 
-      // Mock referral records - in production, you'd fetch from database
-      const mockReferrals: ReferralRecord[] = [
-        {
-          id: '1',
-          eventTitle: 'Luxury Wedding Reception',
-          customerName: 'John Doe',
-          commissionAmount: 500,
-          status: 'paid',
-          createdAt: '2024-01-15T10:30:00Z'
-        },
-        {
-          id: '2',
-          eventTitle: 'Corporate Gala Night',
-          customerName: 'Jane Smith',
-          commissionAmount: 300,
-          status: 'pending',
-          createdAt: '2024-01-20T14:20:00Z'
-        }
-      ];
-
-      setReferrals(mockReferrals);
+      // Fetch real referral records from database
+      const response = await fetch(`/api/influencer/referrals?influencerId=${influencerId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setReferrals(data.referrals || []);
+      } else {
+        console.error('Failed to fetch referral data');
+        setReferrals([]);
+      }
     } catch (error) {
       console.error('Error loading referral data:', error);
     } finally {

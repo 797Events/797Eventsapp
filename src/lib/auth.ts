@@ -175,23 +175,8 @@ export function createSession(user: Omit<SessionUser, 'exp'>): string {
 }
 
 export async function authenticateUser(email: string, password: string): Promise<SessionUser | null> {
-  try {
-    // Mock authentication - in production, use Supabase auth
-    if (email === 'admin@797events.com' && password === 'admin123') {
-      return {
-        id: 'admin-001',
-        email,
-        name: 'Admin User',
-        isAdmin: true,
-        role: 'admin',
-        exp: Date.now() + (24 * 60 * 60 * 1000)
-      };
-    }
-
-    // Could add more user checks here
-    return null;
-  } catch (error) {
-    console.error('Authentication error:', error);
-    return null;
-  }
+  // This function is deprecated - use AuthService.login() instead
+  // All authentication is now handled through Supabase database
+  console.warn('authenticateUser is deprecated, use AuthService.login() instead');
+  return null;
 }

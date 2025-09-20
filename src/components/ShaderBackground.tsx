@@ -276,11 +276,9 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
       
       <style jsx>{`
         .shader-background-container {
-          position: absolute;
-          top: 0;
-          left: 0;
+          position: relative;
           width: 100%;
-          height: 100vh;
+          min-height: 100vh;
         }
 
         .webgl {

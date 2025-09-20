@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import GrainyOverlay from '@/components/GrainyOverlay';
 import ShimmerOverlay from '@/components/ShimmerOverlay';
+import ShaderBackground from '@/components/ShaderBackground';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import EventShowcase from '@/components/EventShowcase';
@@ -131,9 +132,10 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden bg-gradient-to-br from-purple-950 via-violet-950 via-purple-900 to-indigo-950">
-      <GrainyOverlay />
-      <ShimmerOverlay />
+    <div className="min-h-screen flex flex-col relative">
+      <ShaderBackground>
+        <GrainyOverlay />
+        <ShimmerOverlay />
 
       {/* Navigation */}
       <Navbar
@@ -161,9 +163,9 @@ export default function HomePage() {
                   priority
                 />
               </div>
-              {/* Animated Text - Below 797 Logo with Montserrat Font */}
-              <div className="text-center relative z-20" style={{ transform: 'translateY(-30px)' }}>
-                <h1 className="text-[20px] font-bold bg-gradient-to-b from-yellow-400 to-black bg-clip-text text-transparent opacity-0 animate-fade-slide-up font-montserrat">
+              {/* Animated Text - Below 797 Logo with Bethaine Font */}
+              <div className="text-center">
+                <h1 className="text-[18px] font-bold text-white opacity-0 animate-fade-slide-up" style={{ fontFamily: 'Bethaine, serif' }}>
                   Your Vision… Our Innovation
                 </h1>
               </div>
@@ -299,6 +301,7 @@ export default function HomePage() {
           }
         }
       `}</style>
+      </ShaderBackground>
     </div>
   );
 }

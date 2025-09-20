@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authenticateUser, createSession } from '@/lib/auth';
-import Button from './Button';
-import GlassmorphModal from './GlassmorphModal';
+import Button from '../src/components/Button';
+import GlassmorphModal from '../src/components/GlassmorphModal';
 
 interface LoginModalProps {
   isOpen: boolean;

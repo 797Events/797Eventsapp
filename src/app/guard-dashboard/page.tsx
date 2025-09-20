@@ -81,29 +81,7 @@ export default function GuardDashboard() {
           }
         }
 
-        // Fallback: Check temporary session for demo/testing
-        const tempSession = localStorage.getItem('temp_admin_session');
-        if (tempSession) {
-          try {
-            const session = JSON.parse(tempSession);
-            if (session.expires_at > Date.now() && session.role === 'guard') {
-              setCurrentUser({
-                id: session.user.id,
-                email: session.user.email,
-                name: session.user.user_metadata?.full_name || 'Security Guard',
-                role: 'guard'
-              });
-              setIsAuthenticated(true);
-              setScanCount(0);
-              setLoading(false);
-              return;
-            } else if (session.expires_at <= Date.now()) {
-              localStorage.removeItem('temp_admin_session');
-            }
-          } catch (e) {
-            localStorage.removeItem('temp_admin_session');
-          }
-        }
+        // No fallback authentication - use unified system only
 
         // No valid authentication found
         router.push('/login');
@@ -345,8 +323,8 @@ export default function GuardDashboard() {
           timestamp,
           signature,
           scanTime: new Date().toISOString(),
-          scannedBy: guardInfo.id || currentUser?.id || 'guard_demo',
-          guardName: guardInfo.name || currentUser?.name || 'Demo Guard',
+          scannedBy: guardInfo.id || currentUser?.id || 'unknown_guard',
+          guardName: guardInfo.name || currentUser?.name || 'Security Guard',
           scanLocation: guardInfo.location || 'Main Gate'
         })
       });

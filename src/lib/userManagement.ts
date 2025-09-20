@@ -10,6 +10,7 @@ export interface User {
   phone?: string;
   role: UserRole;
   is_active: boolean;
+  referral_code?: string;
   created_at: string;
   updated_at: string;
 }

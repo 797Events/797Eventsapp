@@ -44,7 +44,7 @@ async function generateQRCodeOptimized(ticketData: TicketData): Promise<string> 
       sig: generateSecurityHash(ticketData.bookingId, ticketData.eventId || '', ticketData.customerEmail)
     });
 
-    console.log('QR data size:', qrData.length, 'chars');
+    // QR data prepared
 
     // Use higher error correction for reliability
     const qrCodeUrl = await QRCode.toDataURL(qrData, {
@@ -117,7 +117,7 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
   }
 
   try {
-    console.log('🎫 Using custom Ticket-purple.png template');
+    // Using custom template
 
     // Generate QR code with timeout
     const qrCodePromise = generateQRCodeOptimized(ticketData);
@@ -172,12 +172,12 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
     // Ticket ID - CORRECTED POSITION: down 0.25px and right 0.5px
     pdf.setFontSize(12);
     addSafeText(pdf, formattedTicketId, 22, 14.75, 100);
-    console.log(`Ticket ID positioned at: (22, 14.75)`);
+    // Ticket ID positioned
 
     // Customer Name - CORRECTED POSITION: left 2px and down 0.25px
     pdf.setFontSize(12);
     addSafeText(pdf, ticketData.customerName, 21.5, 22.75, 120);
-    console.log(`Name positioned at: (21.5, 22.75)`);
+    // Customer name positioned
 
     // Pass Type - CORRECTED POSITION: down 0.25px and left 2.25px
     pdf.setFontSize(12);
@@ -186,7 +186,7 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
       passDisplayName = `Day ${ticketData.passDetails.dayNumber}: ${ticketData.passDetails.dayTitle}`;
     }
     addSafeText(pdf, passDisplayName, 24.25, 30.75, 120);
-    console.log(`Type positioned at: (24.25, 30.75)`);
+    // Pass type positioned
 
     // QR Code - CORRECTED: moved left 1px and up 1px, increased size by 10%
     if (qrCodeDataURL && qrCodeDataURL.length > 0) {
@@ -195,7 +195,7 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
       const qrY = 46.5; // MOVED UP by 1px from previous 47.5
 
       pdf.addImage(qrCodeDataURL, 'PNG', qrX, qrY, qrSize, qrSize);
-      console.log(`QR positioned at: (${qrX}, ${qrY}) with size ${qrSize}`);
+      // QR code positioned
     } else {
       // Fallback if QR generation fails
       pdf.setFont('helvetica', 'bold');
@@ -205,7 +205,7 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
       addSafeText(pdf, 'ERROR', 39, 66.5, 50, { align: 'center' });
     }
 
-    console.log('PDF generation completed using custom template');
+    // PDF generation completed
     return pdf.output('blob');
 
   } catch (error) {
@@ -238,20 +238,29 @@ export function generateTicketId(dayNumber: number = 1, sequenceNumber?: number)
 // Helper function to get next sequence number from database
 export async function getNextTicketSequence(dayNumber: number): Promise<number> {
   try {
-    const { unifiedDb } = await import('./unifiedDatabase');
+    const { supabase } = await import('./supabase');
 
-    // Get the count of existing tickets for this day
-    // This would need to be implemented in your database
-    // For now, return a placeholder
+    // Get the current year for the prefix
     const currentYear = new Date().getFullYear().toString().slice(-2);
     const dayPrefix = `TGIN-${currentYear}-D${dayNumber}-`;
 
-    // Count existing tickets with this prefix
-    // This is a placeholder - you'll need to implement the actual database query
-    console.log(`Getting next sequence for day ${dayNumber} with prefix: ${dayPrefix}`);
+    // Count existing tickets with this prefix from the database
+    const { count, error } = await supabase
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .like('ticket_id', `${dayPrefix}%`);
 
-    // Return next available number (starting from 1)
-    return 1; // This should be replaced with actual database count + 1
+    if (error) {
+      console.error('Error getting ticket sequence:', error);
+      // Fallback to timestamp-based sequence if database fails
+      return Math.floor(Date.now() / 1000) % 10000;
+    }
+
+    // Return next available number (count + 1)
+    const nextSequence = (count || 0) + 1;
+    // Next sequence determined
+
+    return nextSequence;
 
   } catch (error) {
     console.error('Error getting ticket sequence:', error);

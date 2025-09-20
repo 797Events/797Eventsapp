@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { EventData } from '@/lib/data';
-import EventCard from './EventCard';
+import EventCard from '../src/components/EventCard';
 
 interface EventTimelineProps {
   events: EventData[];

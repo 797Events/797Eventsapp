@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 
 export default function QRScanner() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<{
     type: 'success' | 'error' | 'already_attended';
@@ -19,60 +18,35 @@ export default function QRScanner() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scannerRef = useRef<any>(null);
+  const router = useRouter();
 
-  // Authentication check
+  // Unified authentication check
   useEffect(() => {
     const checkAuthentication = async () => {
-      // First check regular scanner auth
-      const sessionToken = localStorage.getItem('scanner_auth');
-      if (sessionToken) {
+      const userToken = localStorage.getItem('auth_token');
+      const userData = localStorage.getItem('auth_user');
+
+      if (userToken && userData) {
         try {
-          const { isValidSession, decodeSession } = await import('@/lib/auth');
-          if (isValidSession(sessionToken)) {
-            const user = decodeSession(sessionToken);
-            if (user && user.role === 'guard') {
+          const { isValidSession } = await import('@/lib/auth');
+          if (isValidSession(userToken)) {
+            const user = JSON.parse(userData);
+            if (user && (user.role === 'guard' || user.role === 'admin')) {
               setIsAuthenticated(true);
               return;
-            } else {
-              // Invalid role, clear auth
-              localStorage.removeItem('scanner_auth');
-              localStorage.removeItem('guard_info');
             }
-          } else {
-            // Invalid session, clear auth
-            localStorage.removeItem('scanner_auth');
-            localStorage.removeItem('guard_info');
           }
         } catch (error) {
-          console.error('Session validation error:', error);
-          localStorage.removeItem('scanner_auth');
-          localStorage.removeItem('guard_info');
+          console.error('Authentication error:', error);
         }
       }
 
-      // Fallback: Check temporary guard session from main login
-      const tempSession = localStorage.getItem('temp_admin_session');
-      if (tempSession) {
-        try {
-          const session = JSON.parse(tempSession);
-          if (session.expires_at > Date.now() && session.role === 'guard') {
-            // Set guard info for scanner
-            localStorage.setItem('guard_info', JSON.stringify({
-              id: session.user.id,
-              name: session.user.user_metadata?.full_name || 'Security Guard',
-              location: 'Main Gate'
-            }));
-            setIsAuthenticated(true);
-            return;
-          }
-        } catch (e) {
-          console.error('Error parsing temp session:', e);
-        }
-      }
+      // Not authenticated - redirect to login
+      router.push('/login');
     };
 
     checkAuthentication();
-  }, []);
+  }, [router]);
 
   // Handle tab visibility to save battery and resources
   useEffect(() => {
@@ -208,58 +182,7 @@ export default function QRScanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isScanning]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      // Use unified authentication system with demo bypass
-      const { authenticateUser, createSession } = await import('@/lib/auth');
-
-      // Try proper authentication first, then demo bypass
-      let user = await authenticateUser('security@797events.com', password);
-
-      // Demo bypass for testing
-      if (!user && password === 'Guard@123') {
-        const { userManager } = await import('@/lib/userManagement');
-        const guardUser = await userManager.getUserByEmail('security@797events.com');
-        if (guardUser && guardUser.role === 'guard' && guardUser.is_active) {
-          user = {
-            id: guardUser.id,
-            email: guardUser.email,
-            name: guardUser.full_name,
-            role: guardUser.role,
-            isAdmin: false,
-            exp: Date.now() + (24 * 60 * 60 * 1000)
-          };
-        }
-      }
-
-      if (user && user.role === 'guard') {
-        // Create session token
-        const sessionToken = createSession(user);
-        localStorage.setItem('scanner_auth', sessionToken);
-        localStorage.setItem('guard_info', JSON.stringify({
-          id: user.id,
-          name: user.name,
-          location: 'Main Gate'
-        }));
-
-        setIsAuthenticated(true);
-        setScanResult(null);
-      } else {
-        setScanResult({
-          type: 'error',
-          message: 'Invalid guard credentials. Access denied.'
-        });
-      }
-    } catch (error) {
-      console.error('Guard authentication error:', error);
-      setScanResult({
-        type: 'error',
-        message: 'Authentication system error. Please try again.'
-      });
-    }
-  };
+  // Authentication is now handled by unified login system
 
   const onScanSuccess = async (decodedText: string, decodedResult: any) => {
     // Prevent rapid duplicate scans and processing overlap
@@ -349,8 +272,8 @@ export default function QRScanner() {
           timestamp,
           signature,
           scanTime: new Date().toISOString(),
-          scannedBy: guardInfo.id || 'guard_demo',
-          guardName: guardInfo.name || 'Demo Guard',
+          scannedBy: guardInfo.id || 'unknown_guard',
+          guardName: guardInfo.name || 'Security Guard',
           scanLocation: guardInfo.location || 'Main Gate'
         })
       });
@@ -456,47 +379,10 @@ export default function QRScanner() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 w-full max-w-md border border-white/20">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">🎫 QR Scanner</h1>
-            <p className="text-gray-300">Event Staff Access Only</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-white text-sm font-medium mb-2">
-                Staff Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter staff password"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
-            >
-              🔐 Login to Scanner
-            </button>
-          </form>
-
-          {scanResult?.type === 'error' && (
-            <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
-              <p className="text-red-200 text-center">{scanResult.message}</p>
-            </div>
-          )}
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-            <p className="text-blue-400 text-sm font-medium mb-1">Demo Password:</p>
-            <p className="text-blue-300 text-xs font-mono">Guard@123</p>
-            <p className="text-blue-300/80 text-xs mt-1">Use this password to test the QR scanner</p>
-          </div>
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 w-full max-w-md border border-white/20 text-center">
+          <div className="animate-spin h-8 w-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-4"></div>
+          <h1 className="text-2xl font-bold text-white mb-2">Authenticating...</h1>
+          <p className="text-gray-300">Redirecting to login page</p>
         </div>
       </div>
     );
