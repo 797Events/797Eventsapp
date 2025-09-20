@@ -882,7 +882,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
                                 🎓 10% student discount
                                 {promoValidation.requiresVerification && ' (ID verification required)'}
                               </p>
-                              {studentVerificationResult === 'verified' && (
+                              {studentVerificationResult?.isVerified && (
                                 <p className="text-blue-400 mt-1">✅ Student ID verified!</p>
                               )}
                             </div>
@@ -925,7 +925,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
 
                         {studentVerificationResult && !showStudentUpload && (
                           <div className="text-sm text-gray-300">
-                            <p>✅ Student ID verified - {studentVerificationResult.discountPercentage}% discount applied</p>
+                            <p>✅ Student ID verified - {studentVerificationResult?.discountPercentage}% discount applied</p>
                             <button
                               type="button"
                               onClick={() => setShowStudentUpload(true)}

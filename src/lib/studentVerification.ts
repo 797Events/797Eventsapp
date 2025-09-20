@@ -173,7 +173,7 @@ async function extractTextFromImage(imageDataUrl: string): Promise<string> {
             console.log(`📄 OCR Progress: ${(m.progress * 100).toFixed(1)}%`);
           }
         },
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-()./:@'
+        // tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-()./:@' // Removed - not compatible with current tesseract.js version
       }
     );
 
