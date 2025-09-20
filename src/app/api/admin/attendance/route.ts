@@ -157,10 +157,10 @@ export async function GET(request: NextRequest) {
     // Check-in patterns (hourly distribution)
     const hourlyDistribution = Array.from({ length: 24 }, (_, hour) => ({
       hour,
-      count: attendanceData?.filter(record => {
+      count: (attendanceData || []).filter(record => {
         const checkInHour = new Date(record.scanned_at).getHours();
         return checkInHour === hour;
-      })?.length || 0
+      }).length
     }));
 
     // Top attendees
