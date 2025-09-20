@@ -1,0 +1,9 @@
+PS E:\797events> git checkout -b backup-all-improvements-$(date +%Y%m%d)
+Get-Date : Cannot bind parameter 'Date'. Cannot convert value "+%Y%m%d" to type "System.DateTime". Error: "String was not recognized as a valid DateTime."
+At line:1 char:48
++ git checkout -b backup-all-improvements-$(date +%Y%m%d)
++                                                ~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Get-Date], ParameterBindingException
+    + FullyQualifiedErrorId : CannotConvertArgumentNoMessage,Microsoft.PowerShell.Commands.GetDateCommand
+
+Switched to a new branch 'backup-all-improvements-'
