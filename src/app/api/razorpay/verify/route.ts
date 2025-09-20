@@ -100,8 +100,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate PDF ticket with comprehensive data
-        const { generateTicketPDF, generateTicketId, enhanceTicketData } = await import('@/lib/ticketGenerator');
-        const ticketId = generateTicketId();
+        const { generateTicketPDF, generateTicketId, enhanceTicketData, getNextTicketSequence } = await import('@/lib/ticketGenerator');
+
+        // Generate proper TGIN ticket ID format
+        const dayNumber = eventDetails?.passDetails?.dayNumber || 1; // Get day from pass details
+        const sequenceNumber = await getNextTicketSequence(dayNumber); // Get next sequence from database
+        const ticketId = generateTicketId(dayNumber, sequenceNumber);
 
         // Create basic ticket data with all available information
         const basicTicketData: any = {
