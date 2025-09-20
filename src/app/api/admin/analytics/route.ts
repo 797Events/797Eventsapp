@@ -84,16 +84,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch passes' }, { status: 500 });
     }
 
-    // Calculate KPIs
-    const totalEvents = eventsData.length;
-    const activeEvents = eventsData.filter(e => e.is_active).length;
-    const totalTicketsSold = bookingsData.reduce((sum, booking) => sum + booking.quantity, 0);
-    const totalRevenue = bookingsData.reduce((sum, booking) => sum + booking.total_amount, 0);
+    // Calculate KPIs (with null safety)
+    const totalEvents = eventsData?.length || 0;
+    const activeEvents = eventsData?.filter(e => e.is_active)?.length || 0;
+    const totalTicketsSold = bookingsData?.reduce((sum, booking) => sum + (booking?.quantity || 0), 0) || 0;
+    const totalRevenue = bookingsData?.reduce((sum, booking) => sum + (booking?.total_amount || 0), 0) || 0;
     const averageTicketPrice = totalTicketsSold > 0 ? Math.round(totalRevenue / totalTicketsSold) : 0;
 
-    // Find top selling event
+    // Find top selling event (with null safety)
     const eventSales: { [eventId: string]: { title: string; sales: number } } = {};
-    bookingsData.forEach(booking => {
+    bookingsData?.forEach(booking => {
       const eventTitle = (booking.events as any)?.title || 'Unknown Event';
       if (!eventSales[booking.event_id]) {
         eventSales[booking.event_id] = { title: eventTitle, sales: 0 };
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
     // Prepare sales data for charts (group by day)
     const salesByDay: { [date: string]: { tickets: number; revenue: number } } = {};
 
-    bookingsData.forEach(booking => {
+    bookingsData?.forEach(booking => {
       const date = new Date(booking.created_at).toISOString().split('T')[0];
       if (!salesByDay[date]) {
         salesByDay[date] = { tickets: 0, revenue: 0 };
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
 
     // Event analytics (performance by event) with ticket type breakdown
     const eventAnalytics = Object.entries(eventSales).map(([eventId, data]) => {
-      const eventBookings = bookingsData.filter(b => b.event_id === eventId);
+      const eventBookings = bookingsData?.filter(b => b.event_id === eventId) || [];
       const eventPasses = passesData?.filter(p => p.event_id === eventId) || [];
 
       // Calculate ticket types breakdown for this event
