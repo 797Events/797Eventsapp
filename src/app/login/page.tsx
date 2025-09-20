@@ -4,9 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Button from '@/components/Button';
-import ShaderBackground from '@/components/ShaderBackground';
-import GrainyOverlay from '@/components/GrainyOverlay';
-import ShimmerOverlay from '@/components/ShimmerOverlay';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -81,12 +78,9 @@ export default function LoginPage() {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-purple-950 via-violet-950 via-purple-900 to-indigo-950">
-      <ShaderBackground />
-      <GrainyOverlay />
-      <ShimmerOverlay />
-      
-      <div className="relative z-10 w-full max-w-md mx-4">
+    <div className="min-h-screen bg-slate-900 relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center relative z-10">
+        <div className="w-full max-w-md mx-4">
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8">
           {!showForgotPassword ? (
             <>
@@ -255,6 +249,7 @@ export default function LoginPage() {
               )}
             </>
           )}
+        </div>
         </div>
       </div>
     </div>

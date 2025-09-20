@@ -161,9 +161,9 @@ export default function HomePage() {
                   priority
                 />
               </div>
-              {/* Animated Text - Below 797 Logo with Bethaine Font */}
-              <div className="text-center">
-                <h1 className="text-[18px] font-bold text-white opacity-0 animate-fade-slide-up" style={{ fontFamily: 'Bethaine, serif' }}>
+              {/* Animated Text - Below 797 Logo with Montserrat Font */}
+              <div className="text-center relative z-20" style={{ transform: 'translateY(-30px)' }}>
+                <h1 className="text-[20px] font-bold bg-gradient-to-b from-yellow-400 to-black bg-clip-text text-transparent opacity-0 animate-fade-slide-up font-montserrat">
                   Your Vision… Our Innovation
                 </h1>
               </div>
@@ -239,148 +239,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Admin controls removed for production */}
-        {false && user?.isAdmin && (
-          <section className="py-12 px-4">
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-8">
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-white mb-2 font-montserrat">
-                    🔧 Admin Debug Controls
-                  </h3>
-                  <p className="text-white/60 text-sm">Tools for testing and managing events</p>
-                </div>
-
-                <div className="space-y-6">
-                  {/* Display Mode Selector */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-white mb-3">Display Modes</h4>
-                    <div className="flex justify-center">
-                      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2 flex items-center space-x-2">
-                        <button
-                          onClick={() => {
-                            const showcase = document.querySelector('[data-display-mode]');
-                            if (showcase) showcase.setAttribute('data-display-mode', 'showcase');
-                            window.location.href = '#events';
-                          }}
-                          className="px-4 py-2 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/10 transition-all"
-                        >
-                          🎯 Smart Showcase
-                        </button>
-                        <button
-                          onClick={() => window.location.href = '/timeline'}
-                          className="px-4 py-2 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/10 transition-all"
-                        >
-                          📅 Timeline View
-                        </button>
-                        <button
-                          onClick={() => window.location.href = '/slider'}
-                          className="px-4 py-2 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/10 transition-all"
-                        >
-                          🎬 Auto Slider
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Test Data Controls */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-white mb-3">Test Data Management</h4>
-                    <div className="flex flex-wrap gap-3 justify-center">
-                      <button
-                        onClick={() => window.location.reload()}
-                        className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm"
-                      >
-                        🔄 Refresh Page
-                      </button>
-                      <button
-                        onClick={() => {
-                          const defaultEvents: EventData[] = [
-                            {
-                              id: '1',
-                              title: 'Luxury Wedding Reception',
-                              description: 'An elegant evening celebration with premium dining and entertainment',
-                              date: '2024-02-15',
-                              time: '18:00',
-                              venue: 'Grand Ballroom, Five Star Hotel',
-                              venueIcon: '🏰',
-                              price: 5000,
-                              image: 'https://via.placeholder.com/800x600/4c1d95/ffffff?text=Luxury+Wedding',
-                              isActive: true,
-                              passes: [
-                                { id: '1', name: 'VIP Pass', price: 8000, available: 50 },
-                                { id: '2', name: 'Regular Pass', price: 5000, available: 100 }
-                              ]
-                            },
-                            {
-                              id: '2',
-                              title: 'Corporate Gala Night',
-                              description: 'Professional networking event with dinner and awards ceremony',
-                              date: '2024-02-20',
-                              time: '19:00',
-                              venue: 'Business Center, Downtown',
-                              venueIcon: '🏢',
-                              price: 3000,
-                              image: 'https://via.placeholder.com/800x600/1e40af/ffffff?text=Corporate+Gala',
-                              isActive: true,
-                              passes: [
-                                { id: '3', name: 'Executive Pass', price: 4000, available: 30 },
-                                { id: '4', name: 'Standard Pass', price: 3000, available: 80 }
-                              ]
-                            }
-                          ];
-                          setEvents(defaultEvents);
-                        }}
-                        className="px-4 py-2 bg-blue-500/20 text-white rounded-lg hover:bg-blue-500/30 transition-colors text-sm"
-                      >
-                        🔄 Reset to Default (2)
-                      </button>
-                      <button
-                        onClick={() => {
-                          const newEvent: EventData = {
-                            id: Date.now().toString(),
-                            title: 'Grand Navratri Festival',
-                            description: 'Celebrate the divine feminine with traditional Garba and Dandiya',
-                            date: '2024-10-15',
-                            time: '20:00',
-                            venue: 'Cultural Center Stadium',
-                            venueIcon: '🕺',
-                            price: 2500,
-                            image: 'https://via.placeholder.com/800x600/dc2626/ffffff?text=Navratri+Festival',
-                            isActive: true,
-                            passes: [
-                              { id: Date.now().toString(), name: 'Festival Pass', price: 2500, available: 200 }
-                            ]
-                          };
-                          setEvents(prev => [...prev, newEvent]);
-                        }}
-                        className="px-4 py-2 bg-green-500/20 text-white rounded-lg hover:bg-green-500/30 transition-colors text-sm"
-                      >
-                        ➕ Add Navratri Event
-                      </button>
-                      <button
-                        onClick={() => {
-                          const adminLink = document.createElement('a');
-                          adminLink.href = '/admin';
-                          adminLink.click();
-                        }}
-                        className="px-4 py-2 bg-purple-500/20 text-white rounded-lg hover:bg-purple-500/30 transition-colors text-sm"
-                      >
-                        🔧 Go to Admin
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="text-center pt-4 border-t border-white/10">
-                    <p className="text-xs text-white/50">
-                      Current events: {events.length} • Admin: {user?.email || 'Not logged in'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
       </main>
 
       {/* Footer */}

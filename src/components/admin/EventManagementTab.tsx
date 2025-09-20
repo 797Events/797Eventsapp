@@ -137,21 +137,28 @@ export default function EventManagementTab() {
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this event?')) {
       try {
+        console.log('🗑️ Deleting event:', id);
+
         const response = await fetch(`/api/admin/events?id=${id}`, {
           method: 'DELETE',
         });
 
+        const responseData = await response.json();
+        console.log('Delete response:', responseData);
+
         if (!response.ok) {
-          throw new Error('Failed to delete event');
+          console.error('❌ Delete failed:', response.status, responseData);
+          throw new Error(responseData.error || `HTTP ${response.status}: Failed to delete event`);
         }
 
+        console.log('✅ Event deleted successfully');
         loadEvents();
         // Trigger real-time update to homepage
         window.dispatchEvent(new Event('events-updated'));
         alert('Event deleted successfully!');
-      } catch (error) {
-        console.error('Error deleting event:', error);
-        alert('Failed to delete event. Please try again.');
+      } catch (error: any) {
+        console.error('❌ Error deleting event:', error);
+        alert(`Failed to delete event: ${error.message || 'Unknown error'}. Please check console for details.`);
       }
     }
   };

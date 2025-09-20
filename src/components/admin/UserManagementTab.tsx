@@ -89,6 +89,8 @@ export default function UserManagementTab({ currentUserRole }: UserManagementTab
 
   const handleCreateUser = async (userData: Omit<User, 'id' | 'created_at' | 'updated_at'> & { password?: string }) => {
     try {
+      console.log('🔄 Creating user:', { email: userData.email, role: userData.role });
+
       // Use createUserWithAuth for roles that need login access (guards, admins)
       if ((userData.role === 'guard' || userData.role === 'admin') && userData.password) {
         const result = await userManager.createUserWithAuth({
@@ -100,27 +102,33 @@ export default function UserManagementTab({ currentUserRole }: UserManagementTab
         });
 
         if (!result) {
+          console.error('❌ createUserWithAuth returned null');
           alert('Failed to create user. Please check console for details.');
           return;
         }
 
         console.log('✅ User created successfully:', result.email);
-        alert(`User created successfully!\n\nEmail: ${userData.email}\nPassword: ${userData.password}\n\nThe user can now sign up at /login with these credentials.`);
+        loadUsers();
+        setShowCreateModal(false);
+        alert(`User created successfully!\n\nEmail: ${userData.email}\nPassword: ${userData.password}\n\nThe user can now login at /login with these credentials.`);
       } else {
         // For regular users (customers, etc.) that don't need login access
+        console.log('🔄 Creating regular user without auth');
         const result = await userManager.createUser(userData);
         if (!result) {
+          console.error('❌ createUser returned null');
           alert('Failed to create user. Please try again.');
           return;
         }
-      }
 
-      loadUsers();
-      setShowCreateModal(false);
-      alert('User created successfully!');
-    } catch (error) {
-      console.error('Error creating user:', error);
-      alert('Failed to create user. Please try again.');
+        console.log('✅ Regular user created successfully');
+        loadUsers();
+        setShowCreateModal(false);
+        alert('User created successfully!');
+      }
+    } catch (error: any) {
+      console.error('❌ Error creating user:', error);
+      alert(`Failed to create user: ${error.message || 'Unknown error'}. Please check console for details.`);
     }
   };
 

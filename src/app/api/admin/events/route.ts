@@ -368,33 +368,79 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get('id');
 
+    console.log('🗑️ DELETE request for event:', eventId);
+
     if (!eventId) {
+      console.error('❌ No event ID provided');
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
     }
 
+    // Validate eventId is a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(eventId)) {
+      console.error('❌ Invalid event ID format:', eventId);
+      return NextResponse.json({ error: 'Invalid event ID format' }, { status: 400 });
+    }
+
+    // Check if event exists first
+    const { data: existingEvent, error: checkError } = await supabase
+      .from('events')
+      .select('id, title')
+      .eq('id', eventId)
+      .single();
+
+    if (checkError || !existingEvent) {
+      console.error('❌ Event not found:', eventId, checkError);
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    console.log('📍 Found event to delete:', existingEvent.title);
+
     // Delete passes first (foreign key constraint)
-    await supabase
+    console.log('🗑️ Deleting passes for event:', eventId);
+    const { error: passesError } = await supabase
       .from('passes')
       .delete()
       .eq('event_id', eventId);
 
+    if (passesError) {
+      console.error('❌ Error deleting passes:', passesError);
+      return NextResponse.json({
+        error: 'Failed to delete event passes',
+        details: passesError.message
+      }, { status: 500 });
+    }
+
+    console.log('✅ Passes deleted successfully');
+
     // Delete event
+    console.log('🗑️ Deleting event:', eventId);
     const { error: eventError } = await supabase
       .from('events')
       .delete()
       .eq('id', eventId);
 
     if (eventError) {
-      console.error('Error deleting event:', eventError);
-      return NextResponse.json({ error: 'Failed to delete event' }, { status: 500 });
+      console.error('❌ Error deleting event:', eventError);
+      return NextResponse.json({
+        error: 'Failed to delete event',
+        details: eventError.message
+      }, { status: 500 });
     }
 
-    return NextResponse.json({ message: 'Event deleted successfully' });
+    console.log('✅ Event deleted successfully:', existingEvent.title);
+    return NextResponse.json({
+      message: 'Event deleted successfully',
+      eventTitle: existingEvent.title
+    });
 
-  } catch (error) {
-    console.error('Delete event API error:', error);
+  } catch (error: any) {
+    console.error('❌ Delete event API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        details: error.message
+      },
       { status: 500 }
     );
   }

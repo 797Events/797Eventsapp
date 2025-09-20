@@ -4,8 +4,9 @@ import React, { useState, lazy, Suspense } from 'react';
 import Image from 'next/image';
 import GlassmorphModal from './GlassmorphModal';
 import Button from './Button';
+import StudentVerificationUpload from './StudentVerificationUpload';
 import { EventData, PassType, validateReferralCode, calculateDiscount, calculateCommission } from '@/lib/data';
-import { studentVerificationService } from '@/lib/studentVerification';
+import { studentVerificationService, type VerificationResult } from '@/lib/studentVerification';
 import { validateBookingData, sanitizeInput, ValidationResult } from '@/lib/validation';
 import { Users, Tag, GraduationCap, Calendar, MapPin, Clock, Ticket, Minus, Plus, AlertTriangle } from 'lucide-react';
 
@@ -75,6 +76,8 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
   });
   const [showStudentVerification, setShowStudentVerification] = useState(false);
   const [studentVerificationId, setStudentVerificationId] = useState<string | null>(null);
+  const [showStudentUpload, setShowStudentUpload] = useState(false);
+  const [studentVerificationResult, setStudentVerificationResult] = useState<VerificationResult | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -332,6 +335,35 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
   const handleStudentVerificationSubmitted = (result: any) => {
     setStudentVerificationId(result.isVerified ? 'verified' : 'failed');
     setShowStudentVerification(false);
+  };
+
+  const handleStudentVerificationComplete = (result: VerificationResult) => {
+    setStudentVerificationResult(result);
+    if (result.isVerified) {
+      // Automatically apply student discount
+      setPromoValidation({
+        isValid: true,
+        isChecking: false,
+        type: 'student_promo',
+        discountPercentage: result.discountPercentage,
+        discountAmount: calculateStudentDiscountAmount(result.discountPercentage)
+      });
+    }
+  };
+
+  const handleStudentDiscountApplied = (discountPercentage: number, code: string) => {
+    // Update promo code field with the generated discount code
+    setBookingForm(prev => ({
+      ...prev,
+      promoCode: code
+    }));
+  };
+
+  const calculateStudentDiscountAmount = (discountPercentage: number) => {
+    const selectedPass = getAvailablePasses().find(pass => pass.id === bookingForm.passType);
+    if (!selectedPass) return 0;
+    const originalAmount = selectedPass.price * bookingForm.quantity;
+    return Math.round(originalAmount * (discountPercentage / 100));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -838,6 +870,46 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
                       )}
                       {bookingForm.promoCode && promoValidation.error && (
                         <p className="text-red-400 text-xs mt-1">{promoValidation.error}</p>
+                      )}
+                    </div>
+
+                    {/* Student ID Verification Upload */}
+                    <div className="mt-6 p-4 border border-purple-400 rounded-lg bg-purple-600/10">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-white font-medium flex items-center gap-2">
+                          <GraduationCap className="h-4 w-4" />
+                          Student Verification
+                        </h4>
+                        {!showStudentUpload && (
+                          <button
+                            type="button"
+                            onClick={() => setShowStudentUpload(true)}
+                            className="text-purple-400 hover:text-purple-300 text-sm underline"
+                          >
+                            Upload Student ID for 10% Discount
+                          </button>
+                        )}
+                      </div>
+
+                      {showStudentUpload && (
+                        <StudentVerificationUpload
+                          onVerificationComplete={handleStudentVerificationComplete}
+                          onDiscountApplied={handleStudentDiscountApplied}
+                          disabled={isSubmitting}
+                        />
+                      )}
+
+                      {studentVerificationResult && !showStudentUpload && (
+                        <div className="text-sm text-gray-300">
+                          <p>✅ Student ID verified - {studentVerificationResult.discountPercentage}% discount applied</p>
+                          <button
+                            type="button"
+                            onClick={() => setShowStudentUpload(true)}
+                            className="text-purple-400 hover:text-purple-300 text-xs underline mt-1"
+                          >
+                            View Details
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
