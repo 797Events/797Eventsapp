@@ -882,7 +882,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
                                 🎓 10% student discount
                                 {promoValidation.requiresVerification && ' (ID verification required)'}
                               </p>
-                              {studentVerificationId === 'verified' && (
+                              {studentVerificationResult === 'verified' && (
                                 <p className="text-blue-400 mt-1">✅ Student ID verified!</p>
                               )}
                             </div>
