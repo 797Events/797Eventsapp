@@ -80,8 +80,15 @@ export async function POST(request: NextRequest) {
         console.log('✅ Booking saved successfully:', booking);
 
         // Add analytics tracking for this booking
+        let commissionAmount = 0;
         try {
           const { supabase } = await import('@/lib/supabase');
+
+          // Calculate commission if referral code was used
+          if (discountDetails?.referralCode && discountDetails?.influencerId) {
+            commissionAmount = Number(payment.amount) / 100 * 0.10; // 10% commission
+            console.log('💰 Commission calculated:', commissionAmount, 'for influencer:', discountDetails.influencerId);
+          }
 
           await supabase
             .from('booking_analytics')
@@ -89,7 +96,7 @@ export async function POST(request: NextRequest) {
               booking_id: booking,
               event_id: eventId,
               revenue: Number(payment.amount) / 100,
-              commission: 0, // Can be calculated if there's a referral
+              commission: commissionAmount,
               date: new Date().toISOString().split('T')[0]
             }]);
 
@@ -97,6 +104,50 @@ export async function POST(request: NextRequest) {
         } catch (analyticsError) {
           console.error('📊 Warning: Analytics tracking failed:', analyticsError);
           // Don't fail the payment if analytics fails
+        }
+
+        // Track referral commission if applicable
+        if (discountDetails?.referralCode && discountDetails?.influencerId && commissionAmount > 0) {
+          try {
+            const { trackReferral } = await import('@/lib/referralTracking');
+
+            const referralRecord = await trackReferral(
+              discountDetails.referralCode,
+              booking,
+              commissionAmount
+            );
+
+            if (referralRecord) {
+              console.log('🎯 Referral tracked successfully:', referralRecord);
+
+              // Dispatch event for real-time dashboard updates
+              try {
+                const commissionEvent = new CustomEvent('system-event', {
+                  detail: {
+                    type: 'commission_earned',
+                    data: {
+                      influencerId: discountDetails.influencerId,
+                      bookingId: booking,
+                      commissionAmount: commissionAmount,
+                      eventTitle: eventDetails?.title,
+                      customerName: customerDetails?.name
+                    }
+                  }
+                });
+
+                // This would be better handled by a real-time system like WebSockets
+                // For now, just log the event
+                console.log('📡 Commission event created:', commissionEvent.detail);
+              } catch (eventError) {
+                console.warn('Event dispatch failed:', eventError);
+              }
+            } else {
+              console.warn('❌ Failed to track referral for code:', discountDetails.referralCode);
+            }
+          } catch (referralError) {
+            console.error('❌ Referral tracking error:', referralError);
+            // Don't fail the payment for referral tracking issues
+          }
         }
 
         // Generate PDF ticket with comprehensive data

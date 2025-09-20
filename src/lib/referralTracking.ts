@@ -121,10 +121,106 @@ export async function markCommissionPaid(referralIds: string[]): Promise<boolean
   }
 }
 
+// Enhanced analytics for influencer dashboard
+export async function getInfluencerAnalytics(influencerId: string) {
+  try {
+    // Get basic stats first
+    const basicStats = await getInfluencerStats(influencerId);
+
+    // Get detailed referral data with booking information
+    const { data: referralData, error } = await supabase
+      .from('referrals')
+      .select(`
+        *,
+        bookings (
+          id,
+          customer_name,
+          quantity,
+          total_amount,
+          created_at,
+          events (
+            title
+          )
+        )
+      `)
+      .eq('influencer_id', influencerId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching detailed referral analytics:', error);
+      return {
+        totalReferrals: basicStats.totalReferrals,
+        totalRevenue: basicStats.totalCommission,
+        totalTicketsSold: 0,
+        thisMonthStats: { revenue: 0, referrals: 0, tickets: 0 },
+        topPerformingEvent: 'No data'
+      };
+    }
+
+    // Calculate additional metrics
+    const totalTicketsSold = referralData?.reduce((sum, ref) =>
+      sum + (ref.bookings?.quantity || 0), 0) || 0;
+
+    // Current month stats
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    const thisMonthReferrals = referralData?.filter(ref => {
+      const refDate = new Date(ref.created_at);
+      return refDate.getMonth() === currentMonth && refDate.getFullYear() === currentYear;
+    }) || [];
+
+    const thisMonthStats = {
+      revenue: thisMonthReferrals.reduce((sum, ref) => sum + ref.commission_amount, 0),
+      referrals: thisMonthReferrals.length,
+      tickets: thisMonthReferrals.reduce((sum, ref) => sum + (ref.bookings?.quantity || 0), 0)
+    };
+
+    // Find top performing event
+    const eventCommissions: Record<string, number> = {};
+    referralData?.forEach(ref => {
+      const eventTitle = ref.bookings?.events?.title || 'Unknown Event';
+      eventCommissions[eventTitle] = (eventCommissions[eventTitle] || 0) + ref.commission_amount;
+    });
+
+    const topPerformingEvent = Object.keys(eventCommissions).length > 0
+      ? Object.entries(eventCommissions).sort(([,a], [,b]) => b - a)[0][0]
+      : 'No events yet';
+
+    return {
+      totalReferrals: basicStats.totalReferrals,
+      totalRevenue: basicStats.totalCommission,
+      totalTicketsSold,
+      thisMonthStats,
+      topPerformingEvent,
+      recentBookings: referralData?.slice(0, 10).map(ref => ({
+        id: ref.id,
+        customerName: ref.bookings?.customer_name || 'Unknown',
+        eventTitle: ref.bookings?.events?.title || 'Unknown Event',
+        commissionAmount: ref.commission_amount,
+        ticketQuantity: ref.bookings?.quantity || 0,
+        totalAmount: ref.bookings?.total_amount || 0,
+        bookingDate: ref.created_at,
+        passType: 'Standard' // Could be enhanced to get actual pass type
+      })) || []
+    };
+
+  } catch (error) {
+    console.error('Error in getInfluencerAnalytics:', error);
+    return {
+      totalReferrals: 0,
+      totalRevenue: 0,
+      totalTicketsSold: 0,
+      thisMonthStats: { revenue: 0, referrals: 0, tickets: 0 },
+      topPerformingEvent: 'No data'
+    };
+  }
+}
+
 // Referral tracker object for consistency with imports
 export const referralTracker = {
   trackReferral,
   getInfluencerStats,
   markCommissionPaid,
-  getInfluencerAnalytics: getInfluencerStats // Alias for analytics
+  getInfluencerAnalytics // Now uses the enhanced analytics function
 };

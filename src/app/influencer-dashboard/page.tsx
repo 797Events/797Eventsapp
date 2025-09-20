@@ -49,12 +49,13 @@ export default function InfluencerDashboard() {
             name: userData.full_name,
             email: userData.email,
             phone: userData.phone,
-            code: 'INF001',
+            promoCode: userData.referral_code || 'INF001',
             totalEarnings: 0,
             currentMonthEarnings: 0,
             totalReferrals: 0,
             currentMonthReferrals: 0,
-            conversionRate: 0
+            conversionRate: 0,
+            commissionRate: 10
           });
         }
       }).catch(error => {
@@ -66,11 +67,11 @@ export default function InfluencerDashboard() {
         const { referralTracker } = await import('@/lib/referralTracking');
 
         // Get comprehensive analytics for this influencer
-        const analytics = referralTracker.getInfluencerAnalytics(user.id);
+        const analytics = await referralTracker.getInfluencerAnalytics(user.id);
         setReferralAnalytics(analytics);
 
-        // Set mock recent bookings for now
-        setRecentBookings([]);
+        // Set recent bookings from analytics
+        setRecentBookings(analytics.recentBookings || []);
 
         console.log('📊 Loaded referral analytics:', analytics);
       } catch (error) {

@@ -520,8 +520,11 @@ export async function validateReferralCode(code: string, eventId?: string, order
     );
 
     if (influencer) {
-      const discountPercentage = 10; // Default 10% discount for influencer codes
-      const discountAmount = orderAmount ? Math.round((orderAmount * discountPercentage) / 100) : 0;
+      // ✅ FIXED: Influencer codes should NOT give customer discounts
+      // Influencers earn commission, customers pay full price
+      const discountPercentage = 0; // No discount for customers
+      const discountAmount = 0; // No discount for customers
+      const commissionRate = 10; // 10% commission for influencer
 
       return {
         isValid: true,
@@ -529,7 +532,7 @@ export async function validateReferralCode(code: string, eventId?: string, order
         influencer: {
           id: influencer.id,
           name: influencer.full_name,
-          commissionRate: 10
+          commissionRate: commissionRate
         },
         discountPercentage,
         discountAmount

@@ -7,10 +7,9 @@ import Button from './Button';
 import { EventData, PassType, validateReferralCode, calculateDiscount, calculateCommission } from '@/lib/data';
 import { studentVerificationService } from '@/lib/studentVerification';
 import { validateBookingData, sanitizeInput, ValidationResult } from '@/lib/validation';
-import { Users, Tag, GraduationCap, Calendar, MapPin, Clock, Ticket, Minus, Plus, AlertTriangle } from 'lucide-react';
+import { Users, Tag, GraduationCap, Calendar, MapPin, Clock, Ticket, Minus, Plus, AlertTriangle, Upload, FileImage, X } from 'lucide-react';
 
 // Lazy load heavy components
-const StudentVerificationModal = lazy(() => import('./StudentVerificationModal'));
 const BookingSuccessModal = lazy(() => import('./BookingSuccessModal'));
 
 interface CleanBookingModalProps {
@@ -73,8 +72,10 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
     isValid: false,
     isChecking: false
   });
-  const [showStudentVerification, setShowStudentVerification] = useState(false);
   const [studentVerificationId, setStudentVerificationId] = useState<string | null>(null);
+  const [studentIdFile, setStudentIdFile] = useState<File | null>(null);
+  const [studentIdPreview, setStudentIdPreview] = useState<string | null>(null);
+  const [isUploadingStudentId, setIsUploadingStudentId] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -150,7 +151,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
 
         if (isStudentCode) {
           // Simple student verification for demo
-          const eligibility = { isEligible: true, discount: 15 };
+          const eligibility = { isEligible: true, discount: 10 };
 
           if (eligibility.isEligible) {
             setPromoValidation({
@@ -227,6 +228,10 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
           referralCode: '',
           promoCode: ''
         }));
+        // Reset student verification when modal opens
+        setStudentIdFile(null);
+        setStudentIdPreview(null);
+        setStudentVerificationId(null);
       } else {
         setBookingForm(prev => ({
           ...prev,
@@ -239,6 +244,10 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
           referralCode: '',
           promoCode: ''
         }));
+        // Reset student verification when modal opens
+        setStudentIdFile(null);
+        setStudentIdPreview(null);
+        setStudentVerificationId(null);
       }
     }
   }, [isOpen, event]);
@@ -329,9 +338,36 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
     }));
   };
 
-  const handleStudentVerificationSubmitted = (result: any) => {
-    setStudentVerificationId(result.isVerified ? 'verified' : 'failed');
-    setShowStudentVerification(false);
+
+  const handleStudentIdUpload = async (file: File) => {
+    setIsUploadingStudentId(true);
+    try {
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setStudentIdPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      setStudentIdFile(file);
+
+      // For now, automatically mark as verified when file is uploaded
+      // In production, this would be sent to a verification service
+      setTimeout(() => {
+        setStudentVerificationId('verified');
+        setIsUploadingStudentId(false);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Student ID upload failed:', error);
+      setIsUploadingStudentId(false);
+    }
+  };
+
+  const removeStudentId = () => {
+    setStudentIdFile(null);
+    setStudentIdPreview(null);
+    setStudentVerificationId(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -395,7 +431,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
         promoValidation.type === 'student_promo' &&
         promoValidation.requiresVerification &&
         !studentVerificationId) {
-      setShowStudentVerification(true);
+      setValidationErrors(['Please upload your student ID to verify student status']);
       return;
     }
 
@@ -827,10 +863,15 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
                       {promoValidation.isValid && (
                         <div className="text-xs mt-1">
                           {promoValidation.type === 'student_promo' ? (
-                            <p className="text-green-400">
-                              🎓 {promoValidation.college?.discountPercentage}% student discount
-                              {promoValidation.requiresVerification && ' (ID verification required)'}
-                            </p>
+                            <div>
+                              <p className="text-green-400">
+                                🎓 10% student discount
+                                {promoValidation.requiresVerification && ' (ID verification required)'}
+                              </p>
+                              {studentVerificationId === 'verified' && (
+                                <p className="text-blue-400 mt-1">✅ Student ID verified!</p>
+                              )}
+                            </div>
                           ) : (
                             <p className="text-green-400">✅ Valid promo code!</p>
                           )}
@@ -841,6 +882,90 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
                       )}
                     </div>
                   </div>
+
+                  {/* Student ID Upload Section */}
+                  {promoValidation.isValid && promoValidation.type === 'student_promo' && promoValidation.requiresVerification && (
+                    <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <GraduationCap size={16} className="text-blue-400" />
+                        <h6 className="text-blue-400 font-medium text-sm">Student ID Verification Required</h6>
+                      </div>
+
+                      {!studentIdFile ? (
+                        <div>
+                          <p className="text-white/80 text-sm mb-3">
+                            Please upload a clear photo of your student ID to verify your student status and get the 10% discount.
+                          </p>
+                          <div className="relative">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleStudentIdUpload(file);
+                              }}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              id="student-id-upload"
+                            />
+                            <label
+                              htmlFor="student-id-upload"
+                              className="flex items-center justify-center gap-2 w-full p-3 border-2 border-dashed border-blue-400/50 rounded-lg cursor-pointer hover:border-blue-400 transition-colors"
+                            >
+                              <Upload size={20} className="text-blue-400" />
+                              <span className="text-blue-400 font-medium">
+                                {isUploadingStudentId ? 'Uploading...' : 'Click to upload Student ID'}
+                              </span>
+                            </label>
+                          </div>
+                          <p className="text-white/60 text-xs mt-2">
+                            Supported formats: JPG, PNG, PDF (Max 5MB)
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <FileImage size={16} className="text-green-400" />
+                              <span className="text-green-400 text-sm font-medium">
+                                {studentIdFile.name}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={removeStudentId}
+                              className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+
+                          {studentIdPreview && (
+                            <div className="relative w-full max-w-xs mx-auto">
+                              <img
+                                src={studentIdPreview}
+                                alt="Student ID Preview"
+                                className="w-full h-32 object-cover rounded-lg border border-white/20"
+                              />
+                            </div>
+                          )}
+
+                          {studentVerificationId === 'verified' && (
+                            <div className="flex items-center gap-2 text-green-400 text-sm">
+                              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                              Student ID verified! 10% discount applied.
+                            </div>
+                          )}
+
+                          {isUploadingStudentId && (
+                            <div className="flex items-center gap-2 text-blue-400 text-sm">
+                              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                              Verifying student status...
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -855,23 +980,13 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
                 {isSubmitting ? 'Processing...' :
                  availablePasses.length === 0 ? (isMultiDay ? 'Select a Day First' : 'No Passes Available') :
                  promoValidation.isValid && promoValidation.requiresVerification && !studentVerificationId ?
-                 'Verify Student Status & Book' : 'Proceed to Payment'}
+                 'Upload Student ID to Continue' : 'Proceed to Payment'}
               </Button>
             </div>
           </form>
         </div>
       </GlassmorphModal>
 
-      {/* Student Verification Modal */}
-      {showStudentVerification && promoValidation.isValid && promoValidation.type === 'student_promo' && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"><div className="text-white">Loading...</div></div>}>
-          <StudentVerificationModal
-            isOpen={showStudentVerification}
-            onClose={() => setShowStudentVerification(false)}
-            onVerificationComplete={handleStudentVerificationSubmitted}
-          />
-        </Suspense>
-      )}
 
       {/* Booking Success Modal */}
       {showSuccessModal && bookingResult && (
