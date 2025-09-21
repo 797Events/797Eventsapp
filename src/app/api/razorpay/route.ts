@@ -6,6 +6,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('🔹 Razorpay create order request:', body);
 
+    // Log request headers for debugging
+    console.log('🌐 Request headers:', {
+      origin: request.headers.get('origin'),
+      referer: request.headers.get('referer'),
+      host: request.headers.get('host'),
+      userAgent: request.headers.get('user-agent')?.substring(0, 50) + '...'
+    });
+
+    // Log which keys we're using
+    console.log('🔑 Using Razorpay keys:', {
+      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.substring(0, 12) + '...',
+      secretLength: process.env.RAZORPAY_KEY_SECRET?.length
+    });
+
     // Enhanced input validation
     if (!body.amount || typeof body.amount !== 'number' || body.amount <= 0 || body.amount > 1000000) {
       return NextResponse.json(
