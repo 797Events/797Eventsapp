@@ -9,6 +9,13 @@ export async function POST(request: NextRequest) {
 
     const { razorpay_payment_id, razorpay_order_id, razorpay_signature, eventDetails, customerDetails, discountDetails } = body;
 
+    // Debug environment variables
+    console.log('🔧 Environment check:', {
+      key_id_available: !!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      key_secret_available: !!process.env.RAZORPAY_KEY_SECRET,
+      key_id_preview: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.substring(0, 12) + '...',
+    });
+
     // Initialize Razorpay
     const razorpay = new Razorpay({
       key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
@@ -22,8 +29,22 @@ export async function POST(request: NextRequest) {
       .update(body_string.toString())
       .digest('hex');
 
+    console.log('🔐 Signature verification:', {
+      body_string,
+      received_signature: razorpay_signature,
+      expected_signature,
+      signatures_match: expected_signature === razorpay_signature
+    });
+
     if (expected_signature !== razorpay_signature) {
       console.error('❌ Invalid payment signature');
+      console.error('❌ Signature details:', {
+        order_id: razorpay_order_id,
+        payment_id: razorpay_payment_id,
+        received: razorpay_signature,
+        expected: expected_signature,
+        secret_length: process.env.RAZORPAY_KEY_SECRET?.length || 0
+      });
       return NextResponse.json(
         { success: false, error: 'Invalid payment signature' },
         { status: 400 }
@@ -31,12 +52,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch payment details from Razorpay
+    console.log('🔍 Fetching payment details from Razorpay...');
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
+
+    console.log('💳 Payment details from Razorpay:', {
+      id: payment.id,
+      status: payment.status,
+      amount: payment.amount,
+      currency: payment.currency,
+      method: payment.method,
+      captured: payment.captured,
+      order_id: payment.order_id
+    });
 
     if (payment.status !== 'captured' && payment.status !== 'authorized') {
       console.error('❌ Payment not successful:', payment.status);
+      console.error('❌ Expected status: "captured" or "authorized", got:', payment.status);
       return NextResponse.json(
-        { success: false, error: 'Payment not successful' },
+        { success: false, error: `Payment not successful. Status: ${payment.status}` },
         { status: 400 }
       );
     }
@@ -92,8 +125,21 @@ export async function POST(request: NextRequest) {
 
           // Calculate commission if referral code was used
           if (discountDetails?.referralCode && discountDetails?.influencerId) {
-            commissionAmount = Number(payment.amount) / 100 * 0.10; // 10% commission
-            console.log('💰 Commission calculated:', commissionAmount, 'for influencer:', discountDetails.influencerId);
+            const { calculatePassCommission } = await import('@/lib/passCommissionRates');
+
+            // Use pass-based commission calculation
+            const passType = eventDetails?.passType || 'General Access- Single';
+            const eventDate = eventDetails?.date || new Date().toISOString().split('T')[0];
+            const totalAmountInRupees = Number(payment.amount) / 100;
+
+            commissionAmount = calculatePassCommission(passType, eventDate, totalAmountInRupees);
+            console.log('💰 Pass-based commission calculated:', {
+              passType,
+              eventDate,
+              totalAmount: totalAmountInRupees,
+              commissionAmount,
+              influencerId: discountDetails.influencerId
+            });
           }
 
           await supabase
@@ -291,8 +337,22 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('❌ Payment verification error:', error);
+    console.error('❌ Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      type: typeof error,
+      env_vars_available: {
+        key_id: !!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key_secret: !!process.env.RAZORPAY_KEY_SECRET
+      }
+    });
+
     return NextResponse.json(
-      { success: false, error: 'Payment verification failed' },
+      {
+        success: false,
+        error: 'Payment verification failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
