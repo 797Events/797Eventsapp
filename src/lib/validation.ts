@@ -14,13 +14,35 @@ export function validateEmail(email: string): ValidationResult {
 }
 
 export function validatePhone(phone: string): ValidationResult {
-  const phoneRegex = /^[+]?[\d\s\-\(\)]{10,}$/;
-  const isValid = phoneRegex.test(phone);
+  // Remove all non-digits for validation
+  const digitsOnly = phone.replace(/\D/g, '');
+
+  // Check for valid Indian mobile formats
+  const isValid =
+    // 10 digit number starting with 6,7,8,9
+    (/^[6-9]\d{9}$/.test(digitsOnly)) ||
+    // 12 digit with +91 prefix
+    (/^91[6-9]\d{9}$/.test(digitsOnly)) ||
+    // 11 digit starting with 0
+    (/^0[6-9]\d{9}$/.test(digitsOnly));
 
   return {
     isValid,
-    errors: isValid ? [] : ['Please enter a valid phone number']
+    errors: isValid ? [] : ['Please enter a valid Indian mobile number (10 digits starting with 6-9)']
   };
+}
+
+// Format phone number for Razorpay (returns 10-digit number)
+export function formatPhoneForRazorpay(phone: string): string {
+  const digitsOnly = phone.replace(/\D/g, '');
+
+  if (digitsOnly.startsWith('91') && digitsOnly.length === 12) {
+    return digitsOnly.substring(2); // Remove +91
+  }
+  if (digitsOnly.startsWith('0') && digitsOnly.length === 11) {
+    return digitsOnly.substring(1); // Remove leading 0
+  }
+  return digitsOnly.slice(-10); // Take last 10 digits
 }
 
 export function validateName(name: string): ValidationResult {

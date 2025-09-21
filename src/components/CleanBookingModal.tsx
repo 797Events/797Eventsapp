@@ -4,10 +4,8 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import GlassmorphModal from './GlassmorphModal';
 import Button from './Button';
-import StudentVerificationUpload from './StudentVerificationUpload';
 import { EventData, PassType, validateReferralCode, calculateDiscount, calculateCommission } from '@/lib/data';
-import { studentVerificationService, type VerificationResult } from '@/lib/studentVerification';
-import { validateBookingData, sanitizeInput, ValidationResult } from '@/lib/validation';
+import { validateBookingData, sanitizeInput, ValidationResult, formatPhoneForRazorpay } from '@/lib/validation';
 import { Users, Tag, GraduationCap, Calendar, MapPin, Clock, Ticket, Minus, Plus, AlertTriangle } from 'lucide-react';
 
 // Import BookingSuccessModal normally to avoid chunk loading issues
@@ -73,8 +71,8 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
     isValid: false,
     isChecking: false
   });
-  const [showStudentUpload, setShowStudentUpload] = useState(false);
-  const [studentVerificationResult, setStudentVerificationResult] = useState<VerificationResult | null>(null);
+  // showStudentUpload removed - no longer needed
+  // Student verification removed - STUDENT@10 now works without document upload
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -162,28 +160,15 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
         const isStudentCode = bookingForm.promoCode.toLowerCase().includes('student');
 
         if (isStudentCode) {
-          // Check if modern student verification is already complete
-          if (studentVerificationResult && studentVerificationResult.isVerified) {
-            // Use the verified student data instead of requiring re-verification
-            setPromoValidation({
-              isValid: true,
-              isChecking: false,
-              type: 'student_promo',
-              discountAmount: orderAmount * (studentVerificationResult.discountPercentage / 100),
-              college: studentVerificationResult.extractedData?.collegeName || 'Verified Student',
-              requiresVerification: false // Already verified!
-            });
-          } else {
-            // Fall back to requiring verification
-            setPromoValidation({
-              isValid: true,
-              isChecking: false,
-              type: 'student_promo',
-              discountAmount: orderAmount * (10 / 100),
-              college: 'Student University',
-              requiresVerification: true
-            });
-          }
+          // STUDENT@10 now works directly without verification
+          setPromoValidation({
+            isValid: true,
+            isChecking: false,
+            type: 'student_promo',
+            discountAmount: orderAmount * 0.10, // 10% discount
+            college: 'Student Discount',
+            requiresVerification: false
+          });
           return;
         }
 
@@ -219,7 +204,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
     }, 1500); // Increased from 500ms to 1500ms for better UX
 
     return () => clearTimeout(timeoutId);
-  }, [bookingForm.promoCode, bookingForm.passType, bookingForm.quantity, bookingForm.email, event, studentVerificationResult]);
+  }, [bookingForm.promoCode, bookingForm.passType, bookingForm.quantity, bookingForm.email, event]);
 
   // Set defaults when modal opens
   React.useEffect(() => {
@@ -244,7 +229,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
           promoCode: ''
         }));
         // Reset student verification when modal opens
-        setStudentVerificationResult(null);
+        // Student verification removed
       } else {
         setBookingForm(prev => ({
           ...prev,
@@ -258,7 +243,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
           promoCode: ''
         }));
         // Reset student verification when modal opens
-        setStudentVerificationResult(null);
+        // Student verification removed
       }
     }
   }, [isOpen, event]);
@@ -336,11 +321,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
       totalDiscountAmount += promoValidation.discountAmount;
     }
 
-    // Apply direct student verification discount (when no promo code used)
-    if (studentVerificationResult && studentVerificationResult.isVerified && !promoValidation.isValid) {
-      const studentDiscountAmount = originalAmount * (studentVerificationResult.discountPercentage / 100);
-      totalDiscountAmount += studentDiscountAmount;
-    }
+    // Student verification removed - discount now handled via promo codes only
 
     const finalAmount = originalAmount - totalDiscountAmount;
     return { originalAmount, discountAmount: totalDiscountAmount, finalAmount: Math.max(0, finalAmount) };
@@ -357,22 +338,10 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
 
 
 
-  const handleStudentVerificationComplete = (result: VerificationResult) => {
-    setStudentVerificationResult(result);
-    if (result.isVerified) {
-      // Automatically apply student discount
-      setPromoValidation({
-        isValid: true,
-        isChecking: false,
-        type: 'student_promo',
-        discountPercentage: result.discountPercentage,
-        discountAmount: calculateStudentDiscountAmount(result.discountPercentage)
-      });
-    }
-  };
+  // handleStudentVerificationComplete removed - no longer needed
 
   const handleStudentDiscountApplied = (discountPercentage: number, code: string) => {
-    // Student discount is now automatically applied through studentVerificationResult
+    // Student discount is now handled via STUDENT@10 promo code
     // No need to set promo code automatically to avoid conflicts
     console.log('Student discount applied:', discountPercentage + '%');
   };
@@ -440,14 +409,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
       return;
     }
 
-    // Check if student verification is required but not completed
-    if (promoValidation.isValid &&
-        promoValidation.type === 'student_promo' &&
-        promoValidation.requiresVerification &&
-        (!studentVerificationResult || !studentVerificationResult.isVerified)) {
-      setValidationErrors(['Please upload and verify your student ID to get the student discount']);
-      return;
-    }
+    // Student verification removed - STUDENT@10 works without verification
 
     setIsSubmitting(true);
 
@@ -465,35 +427,61 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
 
       const totalAmount = pricing.finalAmount;
 
-      // Create Razorpay order
+      // Log the request data being sent
+      const requestData = {
+        amount: totalAmount,
+        currency: 'INR',
+        receipt: `797_${Date.now().toString().slice(-8)}`,
+        notes: {
+          event_id: event.id,
+          event_title: event.title,
+          customer_name: bookingForm.name.trim(),
+          customer_email: bookingForm.email.trim().toLowerCase(),
+          customer_phone: formatPhoneForRazorpay(bookingForm.phone),
+          pass_type: selectedPass.name,
+          quantity: bookingForm.quantity
+        }
+      };
+
+      console.log('🔹 Sending Razorpay order request:', requestData);
+
+      // Create Razorpay order with customer data
       const orderResponse = await fetch('/api/razorpay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: totalAmount,
-          currency: 'INR',
-          receipt: `receipt_${Date.now()}`,
-        }),
+        body: JSON.stringify(requestData),
       });
 
+      console.log('🔹 Razorpay API response status:', orderResponse.status);
+
       if (!orderResponse.ok) {
-        throw new Error('Failed to create payment order');
+        // Get the actual error response
+        let errorMessage = 'Failed to create payment order';
+        try {
+          const errorData = await orderResponse.json();
+          console.error('❌ Razorpay API error response:', errorData);
+          errorMessage = errorData.error || `API returned status ${orderResponse.status}`;
+        } catch (parseError) {
+          console.error('❌ Failed to parse error response:', parseError);
+          errorMessage = `API returned status ${orderResponse.status}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const orderData = await orderResponse.json();
+      console.log('✅ Razorpay order response:', orderData);
 
       if (!orderData.success) {
-        throw new Error('Failed to create payment order');
+        console.error('❌ Razorpay order creation failed:', orderData);
+        throw new Error(orderData.error || 'Failed to create payment order');
       }
 
-      // Initialize Razorpay payment
+      // Initialize Razorpay payment with enhanced configuration
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: '797 Events',
-        description: `${event.title} - ${selectedPass.name} x${bookingForm.quantity}`,
+        key: orderData.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         order_id: orderData.order_id,
+        name: '797 Events',
+        description: `${event.title} - ${selectedPass.name} (${bookingForm.quantity} ${bookingForm.quantity === 1 ? 'ticket' : 'tickets'})`,
         handler: async function (response: any) {
           // Enhanced verification data
           const verifyResponse = await fetch('/api/razorpay/verify', {
@@ -530,7 +518,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
                 influencerId: referralValidation.influencer?.id || undefined,
                 originalAmount: pricing.originalAmount,
                 discountAmount: pricing.discountAmount,
-                studentVerificationId: studentVerificationResult?.isVerified ? `verified-${Date.now()}` : undefined
+                // studentVerificationId removed - no longer needed
               }
             }),
           });
@@ -547,11 +535,28 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
           }
         },
         prefill: {
-          name: bookingForm.name,
-          email: bookingForm.email,
-          contact: bookingForm.phone,
+          name: bookingForm.name.trim(),
+          email: bookingForm.email.trim().toLowerCase(),
+          contact: formatPhoneForRazorpay(bookingForm.phone),
         },
-        theme: { color: '#8b5cf6' },
+        theme: {
+          color: '#8b5cf6',
+          backdrop_color: 'rgba(0, 0, 0, 0.8)'
+        },
+        modal: {
+          backdropclose: false,
+          escape: false,
+          handleback: false,
+          confirm_close: true,
+          ondismiss: function() {
+            setIsSubmitting(false);
+            console.log('Payment cancelled by user');
+          }
+        },
+        retry: {
+          enabled: true,
+          max_count: 3
+        }
       };
 
       // Load and open Razorpay
@@ -869,7 +874,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
                             ? 'bg-red-500/10 border-red-500/30 focus:border-red-500/50'
                             : 'bg-white/10 border-white/20 focus:border-white/40 focus:bg-white/15'
                         }`}
-                        placeholder="STUDENT@10, VIT25, WELCOME10"
+                        placeholder="Enter promo code"
                       />
                       {promoValidation.isChecking && (
                         <p className="text-yellow-400 text-xs mt-1">Checking code...</p>
@@ -882,9 +887,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
                                 🎓 10% student discount
                                 {promoValidation.requiresVerification && ' (ID verification required)'}
                               </p>
-                              {studentVerificationResult?.isVerified && (
-                                <p className="text-blue-400 mt-1">✅ Student ID verified!</p>
-                              )}
+                              {/* Student verification UI removed */}
                             </div>
                           ) : (
                             <p className="text-green-400">✅ Valid promo code!</p>
@@ -896,47 +899,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
                       )}
                     </div>
 
-                    {/* Student ID Verification Upload - TEMPORARILY HIDDEN */}
-                    {false && (
-                      <div className="mt-6 p-4 border border-purple-400 rounded-lg bg-purple-600/10">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="text-white font-medium flex items-center gap-2">
-                            <GraduationCap className="h-4 w-4" />
-                            Student Verification
-                          </h4>
-                          {!showStudentUpload && (
-                            <button
-                              type="button"
-                              onClick={() => setShowStudentUpload(true)}
-                              className="text-purple-400 hover:text-purple-300 text-sm underline"
-                            >
-                              Upload Student ID for 10% Discount
-                            </button>
-                          )}
-                        </div>
-
-                        {showStudentUpload && (
-                          <StudentVerificationUpload
-                            onVerificationComplete={handleStudentVerificationComplete}
-                            onDiscountApplied={handleStudentDiscountApplied}
-                            disabled={isSubmitting}
-                          />
-                        )}
-
-                        {studentVerificationResult && !showStudentUpload && (
-                          <div className="text-sm text-gray-300">
-                            <p>✅ Student ID verified - {studentVerificationResult?.discountPercentage}% discount applied</p>
-                            <button
-                              type="button"
-                              onClick={() => setShowStudentUpload(true)}
-                              className="text-purple-400 hover:text-purple-300 text-xs underline mt-1"
-                            >
-                              View Details
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {/* Student verification system completely removed */}
                   </div>
 
                 </div>
@@ -952,8 +915,7 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
               >
                 {isSubmitting ? 'Processing...' :
                  availablePasses.length === 0 ? (isMultiDay ? 'Select a Day First' : 'No Passes Available') :
-                 promoValidation.isValid && promoValidation.requiresVerification && (!studentVerificationResult || !studentVerificationResult.isVerified) ?
-                 'Verify Student ID to Continue' : 'Proceed to Payment'}
+                 'Proceed to Payment'}
               </Button>
             </div>
           </form>
