@@ -561,26 +561,34 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
         }
       };
 
-      // Ensure we're on the exact domain Razorpay expects
-      if (window.location.origin !== 'https://797events.com' || !window.location.pathname.endsWith('/')) {
-        const correctUrl = `https://797events.com${window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/'}${window.location.search}`;
-        console.log('🔄 Redirecting to correct domain format for Razorpay:', correctUrl);
-        window.location.href = correctUrl;
-        return;
-      }
+      // Function to open Razorpay with domain check
+      const openRazorpay = () => {
+        // Ensure we're on the exact domain Razorpay expects before opening checkout
+        if (window.location.origin !== 'https://797events.com' || !window.location.pathname.endsWith('/')) {
+          const correctUrl = `https://797events.com${window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/'}${window.location.search}`;
+          console.log('🔄 Redirecting to correct domain format for Razorpay:', correctUrl);
+          // Store booking data in sessionStorage before redirect
+          sessionStorage.setItem('pendingBooking', JSON.stringify({
+            eventId: event.id,
+            bookingForm,
+            totalAmount
+          }));
+          window.location.href = correctUrl;
+          return;
+        }
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      };
 
       // Load and open Razorpay
       if (typeof window.Razorpay === 'undefined') {
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.onload = () => {
-          const rzp = new window.Razorpay(options);
-          rzp.open();
-        };
+        script.onload = openRazorpay;
         document.body.appendChild(script);
       } else {
-        const rzp = new window.Razorpay(options);
-        rzp.open();
+        openRazorpay();
       }
 
     } catch (error) {
