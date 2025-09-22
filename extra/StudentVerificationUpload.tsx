@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Upload, Check, AlertCircle, FileText, Camera } from 'lucide-react';
-import { studentVerificationService, type VerificationResult } from '@/lib/studentVerification';
+import { studentVerificationService, type VerificationResult } from './studentVerification';
 
 interface StudentVerificationUploadProps {
   onVerificationComplete: (result: VerificationResult) => void;

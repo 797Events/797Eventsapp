@@ -1,33 +1,7 @@
-03:50:20.499 
+Error: supabaseUrl is required.
+    at /vercel/path0/.next/server/chunks/9498.js:21:82542
     at new ax (/vercel/path0/.next/server/chunks/9498.js:21:82793)
-03:50:20.499 
     at aI (/vercel/path0/.next/server/chunks/9498.js:21:87053)
-03:50:20.499 
-    at 1926 (/vercel/path0/.next/server/app/api/admin/analytics/route.js:10:2980)
-03:50:20.499 
+    at 1926 (/vercel/path0/.next/server/app/api/admin/analytics/route.js:10:3016)
     at t (/vercel/path0/.next/server/webpack-runtime.js:1:128)
-03:50:20.499 
     at 38645 (/vercel/path0/.next/server/app/api/admin/analytics/route.js:1:727)
-03:50:20.499 
-    at t (/vercel/path0/.next/server/webpack-runtime.js:1:128)
-03:50:20.500 
-    at a (/vercel/path0/.next/server/app/api/admin/analytics/route.js:10:3052)
-03:50:20.500 
-    at /vercel/path0/.next/server/app/api/admin/analytics/route.js:10:3090
-03:50:20.500 
-    at t.X (/vercel/path0/.next/server/webpack-runtime.js:1:1206)
-03:50:20.508 
-03:50:20.509 
-> Build error occurred
-03:50:20.509 
-Error: Failed to collect page data for /api/admin/analytics
-03:50:20.509 
-    at /vercel/path0/node_modules/next/dist/build/utils.js:1269:15
-03:50:20.509 
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
-03:50:20.510 
-  type: 'Error'
-03:50:20.510 
-}
-03:50:20.534 
-Error: Command "npm run build" exited with 1

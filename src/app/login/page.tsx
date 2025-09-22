@@ -86,7 +86,7 @@ export default function LoginPage() {
             <>
               <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold text-white mb-2 font-montserrat">Login</h1>
-                <p className="text-white/70">Access your dashboard - All user types</p>
+                <p className="text-white/70">Access your dashboard - Admin, Guard & Influencer login</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">

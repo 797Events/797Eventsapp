@@ -508,31 +508,36 @@ export async function validateReferralCode(code: string, eventId?: string, order
 
   // Check if it's an influencer referral code
   try {
-    // Import userManager dynamically to avoid circular dependencies
-    const { userManager } = await import('@/lib/userManagement');
-    const allUsers = await userManager.getUsers();
-    const influencers = allUsers.filter(user => user.role === 'influencer' && user.is_active);
+    // Check against influencers table in Supabase
+    const { supabase } = await import('@/lib/supabase');
+    const { data: influencers, error } = await supabase
+      .from('influencers')
+      .select('*')
+      .eq('code', code.toUpperCase())
+      .eq('is_active', true);
 
-    // Look for an influencer with this promo code
-    const influencer = influencers.find(inf =>
-      inf.id.slice(-4) === code.toUpperCase().slice(-4) ||
-      `PROMO${inf.id.slice(-4)}` === code.toUpperCase()
-    );
+    if (error) {
+      console.error('Error checking influencer codes:', error);
+      return { isValid: false, error: 'Database error' };
+    }
+
+    const influencer = influencers?.[0];
 
     if (influencer) {
       // ✅ FIXED: Influencer codes should NOT give customer discounts
       // Influencers earn commission, customers pay full price
       const discountPercentage = 0; // No discount for customers
       const discountAmount = 0; // No discount for customers
-      const commissionRate = 10; // 10% commission for influencer
 
       return {
         isValid: true,
         isInfluencerCode: true,
         influencer: {
           id: influencer.id,
-          name: influencer.full_name,
-          commissionRate: commissionRate
+          name: influencer.name,
+          email: influencer.email,
+          referralCode: influencer.code,
+          commissionRate: 'Pass-based' // Use pass-based commission system
         },
         discountPercentage,
         discountAmount

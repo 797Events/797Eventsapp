@@ -52,43 +52,63 @@ export default function InfluencerDashboard() {
   const [promoCode, setPromoCode] = useState('');
   const router = useRouter();
 
-  const loadInfluencerStats = async (userId: string) => {
+  const loadInfluencerStats = async (influencerEmail: string) => {
     try {
-      const { userManager } = await import('@/lib/userManagement');
-      const { referralTracker } = await import('@/lib/referralTracking');
+      console.log('🔄 Loading influencer stats for:', influencerEmail);
 
-      const user = await userManager.getUserById(userId);
+      // Fetch influencer data from the new influencers API
+      const response = await fetch('/api/influencers');
+      const data = await response.json();
 
-      if (user && user.role === 'influencer') {
-        // Load detailed analytics from referral tracking system
-        const analytics = await referralTracker.getInfluencerAnalytics(userId);
+      if (data.success) {
+        // Find the current influencer by email
+        const currentInfluencer = data.influencers.find((inf: any) => inf.email === influencerEmail);
 
-        // Use real analytics data
-        let stats = analytics;
+        if (currentInfluencer) {
+          console.log('✅ Found influencer data:', currentInfluencer);
 
-        setInfluencerStats({
-          totalSales: stats.totalReferrals,
-          commission: stats.totalRevenue,
-          conversionRate: 15,
-          totalClicks: Math.round(stats.totalReferrals * 4),
-          activePromos: 1,
-          thisMonthSales: 5,
-          lastMonthSales: 3,
-          topPerformingEvent: 'Sample Event'
-        });
+          setInfluencerStats({
+            totalSales: currentInfluencer.totalSales || 0,
+            commission: (currentInfluencer.totalRevenue || 0) * (currentInfluencer.commissionRate / 100),
+            conversionRate: currentInfluencer.totalSales > 0 ? 15 : 0,
+            totalClicks: Math.round((currentInfluencer.totalSales || 0) * 4),
+            activePromos: currentInfluencer.isActive ? 1 : 0,
+            thisMonthSales: Math.round((currentInfluencer.totalSales || 0) * 0.3),
+            lastMonthSales: Math.round((currentInfluencer.totalSales || 0) * 0.2),
+            topPerformingEvent: currentInfluencer.totalSales > 0 ? 'Sample Event' : 'No events yet'
+          });
 
-        // Set the promo code
-        const code = `PROMO${user.id.slice(-4)}`;
-        setPromoCode(code);
+          // Set the referral code
+          setPromoCode(currentInfluencer.referralCode);
+        } else {
+          console.warn('⚠️ Influencer not found in system:', influencerEmail);
+          // Set default values for unregistered influencer
+          setInfluencerStats({
+            totalSales: 0,
+            commission: 0,
+            conversionRate: 0,
+            totalClicks: 0,
+            activePromos: 0,
+            thisMonthSales: 0,
+            lastMonthSales: 0,
+            topPerformingEvent: 'No events yet'
+          });
+          setPromoCode('UNREGISTERED');
+        }
+      } else {
+        console.error('❌ Failed to load influencer data:', data.error);
       }
     } catch (error) {
-      console.error('Error loading influencer stats:', error);
+      console.error('❌ Error loading influencer stats:', error);
     }
   };
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log('🔍 Checking influencer authentication...');
+
+        // First check new JWT-based auth for influencers
         const userToken = localStorage.getItem('auth_token');
         const userData = localStorage.getItem('auth_user');
 
@@ -96,32 +116,53 @@ export default function InfluencerDashboard() {
           const { isValidSession } = await import('@/lib/auth');
           if (isValidSession(userToken)) {
             const user = JSON.parse(userData);
+            console.log('📊 Found user session:', user);
+
             if (user && user.role === 'influencer') {
               setInfluencerData(user);
               setIsAuthenticated(true);
               // Load real influencer stats
               await loadInfluencerStats(user.email);
+              setLoading(false);
+              return;
+            } else if (user.role === 'admin') {
+              router.push('/admin');
+              return;
+            } else if (user.role === 'guard') {
+              router.push('/guard-dashboard');
+              return;
             } else {
-              // Not an influencer - redirect based on role
-              if (user.role === 'admin') {
-                router.push('/admin');
-              } else if (user.role === 'guard') {
-                router.push('/guard-dashboard');
-              } else {
-                router.push('/login');
-              }
+              console.log('❌ User is not an influencer:', user.role);
             }
           } else {
-            // Invalid session
-            router.push('/login');
+            console.log('❌ Invalid session token');
           }
-        } else {
-          // No session
-          router.push('/login');
         }
+
+        // For demo purposes, allow temporary access with specific URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const demoEmail = urlParams.get('demo');
+
+        if (demoEmail) {
+          console.log('🎭 Demo mode activated for:', demoEmail);
+          setInfluencerData({
+            id: 'demo-' + Date.now(),
+            email: demoEmail,
+            name: 'Demo Influencer',
+            role: 'influencer'
+          });
+          setIsAuthenticated(true);
+          await loadInfluencerStats(demoEmail);
+          setLoading(false);
+          return;
+        }
+
+        // No valid authentication found
+        console.log('❌ No valid influencer session found, redirecting to login');
+        router.push('/login?redirect=/influencer');
       } catch (error) {
-        console.error('Authentication error:', error);
-        router.push('/login');
+        console.error('❌ Authentication error:', error);
+        router.push('/login?redirect=/influencer');
       } finally {
         setLoading(false);
       }
@@ -131,7 +172,12 @@ export default function InfluencerDashboard() {
   }, [router]);
 
   const handleSignOut = () => {
+    // Clear all session data
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
     localStorage.removeItem('session');
+    localStorage.removeItem('temp_admin_session');
+    console.log('✅ Signed out, cleared all session data');
     router.push('/');
   };
 

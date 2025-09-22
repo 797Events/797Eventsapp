@@ -15,7 +15,8 @@ import {
   Database,
   Activity,
   GraduationCap,
-  Download
+  Download,
+  TrendingUp
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -31,6 +32,7 @@ const sidebarItems = [
   { id: 'overview' as AdminTab, label: 'Overview & Analytics', icon: BarChart3 },
   { id: 'events' as AdminTab, label: 'Event Management', icon: Calendar },
   { id: 'users' as AdminTab, label: 'User Management', icon: Users },
+  { id: 'influencers' as AdminTab, label: 'Influencer Management', icon: TrendingUp },
   { id: 'student-verification' as AdminTab, label: 'Student Verification', icon: GraduationCap },
   { id: 'attendance-analytics' as AdminTab, label: 'Attendance Analytics', icon: Activity },
 ];

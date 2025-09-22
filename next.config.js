@@ -12,9 +12,30 @@ const nextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'www.797events.com',
+          },
+        ],
+        destination: 'https://797events.com/:path*',
+        permanent: true,
+      },
+      // Ensure all URLs end with trailing slash to match Razorpay whitelist
+      {
+        source: '/:path((?!.*\\.).*[^/])',
+        destination: '/:path*/',
+        permanent: true,
+      },
+    ]
+  },
   poweredByHeader: false,
   compress: true,
-  trailingSlash: false,
+  trailingSlash: true,
   reactStrictMode: true,
   swcMinify: true,
 }

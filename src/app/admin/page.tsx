@@ -9,10 +9,11 @@ import AdminSidebar from '@/components/admin/AdminSidebar';
 import OverviewTab from '@/components/admin/OverviewTab';
 import EventManagementTab from '@/components/admin/EventManagementTab';
 import UserManagementTab from '@/components/admin/UserManagementTab';
+import InfluencerManagementTab from '@/components/admin/InfluencerManagementTab';
 import StudentVerificationTab from '@/components/admin/StudentVerificationTab';
 import AttendanceAnalyticsTab from '@/components/admin/AttendanceAnalyticsTab';
 
-export type AdminTab = 'overview' | 'events' | 'users' | 'student-verification' | 'attendance-analytics';
+export type AdminTab = 'overview' | 'events' | 'users' | 'influencers' | 'student-verification' | 'attendance-analytics';
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -159,6 +160,8 @@ export default function AdminDashboard() {
         return <EventManagementTab />;
       case 'users':
         return <UserManagementTab currentUserRole={currentUser?.role || 'admin'} />;
+      case 'influencers':
+        return <InfluencerManagementTab />;
       case 'student-verification':
         return <StudentVerificationTab />;
       case 'attendance-analytics':

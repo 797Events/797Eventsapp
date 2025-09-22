@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import GrainyOverlay from '@/components/GrainyOverlay';
 import ShimmerOverlay from '@/components/ShimmerOverlay';
-import ShaderBackground from '@/components/ShaderBackground';
+import FastBackground from '@/components/FastBackground';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import EventShowcase from '@/components/EventShowcase';
@@ -133,7 +133,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col relative">
-      <ShaderBackground>
+      <FastBackground>
         <GrainyOverlay />
         <ShimmerOverlay />
 
@@ -301,7 +301,7 @@ export default function HomePage() {
           }
         }
       `}</style>
-      </ShaderBackground>
+      </FastBackground>
     </div>
   );
 }

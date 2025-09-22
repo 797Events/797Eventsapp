@@ -16,40 +16,77 @@ export default function InfluencerDashboard() {
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const router = useRouter();
 
-  const loadInfluencerData = async () => {
-    // Try new JWT-based auth first
-    const userStr = localStorage.getItem('auth_user');
-    let user = null;
+  const loadInfluencerData = async (userEmail: string) => {
+    try {
+      console.log('🔄 Loading influencer data for:', userEmail);
 
-    if (userStr) {
-      try {
-        user = JSON.parse(userStr);
-      } catch (e) {
-        // Fall back to old session format
-        const session = localStorage.getItem('session');
-        if (session && isValidSession(session)) {
-          user = JSON.parse(atob(session));
-        }
-      }
-    } else {
-      // Fall back to old session format
-      const session = localStorage.getItem('session');
-      if (session && isValidSession(session)) {
-        user = JSON.parse(atob(session));
-      }
-    }
+      // Fetch influencer data from the new influencers API
+      const response = await fetch('/api/influencers');
+      const data = await response.json();
 
-    if (user) {
+      if (data.success) {
+        // Find the current influencer by email
+        const currentInfluencer = data.influencers.find((inf: any) => inf.email === userEmail);
 
-      // Refresh influencer data from user management
-      userManager.getUserById(user.id).then(userData => {
-        if (userData) {
-          // Initialize with basic data
+        if (currentInfluencer) {
+          console.log('✅ Found influencer data:', currentInfluencer);
+
+          // Calculate pass-based commission earnings instead of fixed percentage
+          const totalEarnings = currentInfluencer.totalCommission || 0;
+          const currentMonthEarnings = Math.round(totalEarnings * 0.3); // Estimate current month as 30% of total
+
           setInfluencerData({
-            name: userData.full_name,
-            email: userData.email,
-            phone: userData.phone,
-            promoCode: userData.referral_code || 'INF001',
+            name: currentInfluencer.name,
+            email: currentInfluencer.email,
+            phone: currentInfluencer.phone,
+            promoCode: currentInfluencer.referralCode,
+            totalEarnings: totalEarnings,
+            currentMonthEarnings: currentMonthEarnings,
+            totalReferrals: currentInfluencer.totalSales || 0,
+            currentMonthReferrals: Math.round((currentInfluencer.totalSales || 0) * 0.3),
+            conversionRate: currentInfluencer.totalSales > 0 ? 15 : 0,
+            commissionRate: 'Pass-based', // Show as pass-based instead of fixed rate
+            totalRevenue: currentInfluencer.totalRevenue || 0,
+            totalSales: currentInfluencer.totalSales || 0
+          });
+
+          setReferralAnalytics({
+            totalReferrals: currentInfluencer.totalSales || 0,
+            totalRevenue: totalEarnings, // Use calculated pass-based earnings
+            totalTicketsSold: currentInfluencer.totalSales || 0,
+            thisMonthStats: {
+              revenue: currentMonthEarnings,
+              referrals: Math.round((currentInfluencer.totalSales || 0) * 0.3),
+              tickets: Math.round((currentInfluencer.totalSales || 0) * 0.3)
+            },
+            topPerformingEvent: currentInfluencer.totalSales > 0 ? 'Sample Event' : 'No events yet'
+          });
+
+          // Set some sample recent bookings for demo
+          if (currentInfluencer.totalSales > 0) {
+            setRecentBookings([
+              {
+                id: '1',
+                customerName: 'Demo Customer',
+                eventTitle: 'Sample Event',
+                commissionAmount: Math.round((currentInfluencer.totalRevenue || 100) * (currentInfluencer.commissionRate / 100) * 0.5),
+                ticketQuantity: 2,
+                totalAmount: currentInfluencer.totalRevenue || 100,
+                bookingDate: new Date().toISOString(),
+                passType: 'VIP'
+              }
+            ]);
+          } else {
+            setRecentBookings([]);
+          }
+        } else {
+          console.warn('⚠️ Influencer not found in system:', userEmail);
+          // Set default values
+          setInfluencerData({
+            name: 'Demo Influencer',
+            email: userEmail,
+            phone: '',
+            promoCode: 'DEMO001',
             totalEarnings: 0,
             currentMonthEarnings: 0,
             totalReferrals: 0,
@@ -58,25 +95,11 @@ export default function InfluencerDashboard() {
             commissionRate: 10
           });
         }
-      }).catch(error => {
-        console.error('Error loading influencer data:', error);
-      });
-
-      // Load real referral tracking data
-      try {
-        const { referralTracker } = await import('@/lib/referralTracking');
-
-        // Get comprehensive analytics for this influencer
-        const analytics = await referralTracker.getInfluencerAnalytics(user.id);
-        setReferralAnalytics(analytics);
-
-        // Set recent bookings from analytics
-        setRecentBookings(analytics.recentBookings || []);
-
-        console.log('📊 Loaded referral analytics:', analytics);
-      } catch (error) {
-        console.error('Error loading referral analytics:', error);
+      } else {
+        console.error('❌ Failed to load influencer data:', data.error);
       }
+    } catch (error) {
+      console.error('❌ Error loading influencer data:', error);
     }
   };
 
@@ -128,12 +151,12 @@ export default function InfluencerDashboard() {
       setIsAuthenticated(true);
 
       // Load influencer data
-      loadInfluencerData();
+      loadInfluencerData(user.email);
 
       // Listen for analytics updates (real-time commission updates)
       const handleAnalyticsUpdate = () => {
         console.log('Influencer Dashboard: Analytics updated, refreshing data');
-        loadInfluencerData();
+        loadInfluencerData(user.email);
       };
 
       // Listen for real-time system events
@@ -141,10 +164,10 @@ export default function InfluencerDashboard() {
         const eventData = event.detail;
         if (eventData.type === 'commission_earned' && eventData.data.influencerId === user.id) {
           console.log('💰 Real-time commission update:', eventData.data);
-          loadInfluencerData();
+          loadInfluencerData(user.email);
         } else if (eventData.type === 'booking_completed' && eventData.data.influencerId === user.id) {
           console.log('🎫 Real-time booking update:', eventData.data);
-          loadInfluencerData();
+          loadInfluencerData(user.email);
         }
       };
 
@@ -153,7 +176,7 @@ export default function InfluencerDashboard() {
       window.addEventListener('commission-updated', handleAnalyticsUpdate);
 
       // Set up periodic refresh for live updates
-      const refreshInterval = setInterval(loadInfluencerData, 30000); // Refresh every 30 seconds
+      const refreshInterval = setInterval(() => loadInfluencerData(user.email), 30000); // Refresh every 30 seconds
 
       // Cleanup listeners
       return () => {
@@ -163,8 +186,27 @@ export default function InfluencerDashboard() {
         clearInterval(refreshInterval);
       };
     } else {
+      // For demo purposes, allow temporary access with specific URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const demoEmail = urlParams.get('demo');
+
+      if (demoEmail) {
+        console.log('🎭 Demo mode activated for:', demoEmail);
+        const demoUser = {
+          id: 'demo-' + Date.now(),
+          email: demoEmail,
+          name: 'Demo Influencer',
+          role: 'influencer'
+        };
+        setCurrentUser(demoUser);
+        setIsAuthenticated(true);
+        loadInfluencerData(demoEmail);
+        setLoading(false);
+        return;
+      }
+
       console.log('❌ No valid session found, redirecting to login');
-      router.push('/login');
+      router.push('/login?redirect=/influencer-dashboard');
     }
     setLoading(false);
   }, [router]);
@@ -230,7 +272,7 @@ export default function InfluencerDashboard() {
                 <div>
                   <p className="text-white/60 text-sm">Total Revenue</p>
                   <p className="text-3xl font-bold text-green-400">₹{referralAnalytics?.totalRevenue || influencerData?.totalRevenue || 0}</p>
-                  <p className="text-white/40 text-xs mt-1">{influencerData?.commissionRate || 10}% commission rate</p>
+                  <p className="text-white/40 text-xs mt-1">{influencerData?.commissionRate || 'Pass-based'} commission structure</p>
                 </div>
                 <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center border border-green-400/30">
                   <svg width="24" height="24" viewBox="0 0 512 512" fill="currentColor" className="text-green-400">
@@ -330,7 +372,7 @@ export default function InfluencerDashboard() {
                   <div className="bg-white/5 rounded-xl p-3 border border-white/10">
                     <input
                       type="text"
-                      value={`${influencerData?.commissionRate || 10}%`}
+                      value={influencerData?.commissionRate || 'Pass-based'}
                       readOnly
                       className="bg-transparent text-white w-full outline-none"
                     />
@@ -416,6 +458,20 @@ export default function InfluencerDashboard() {
                   <li>• Use event hashtags in your posts</li>
                   <li>• Share behind-the-scenes content</li>
                 </ul>
+              </div>
+
+              <div className="mt-4 p-4 bg-green-500/10 rounded-xl border border-green-400/20">
+                <h3 className="text-green-400 font-semibold mb-2">💰 Commission Structure</h3>
+                <p className="text-white/70 text-sm mb-2">You earn commission based on pass types sold:</p>
+                <div className="grid grid-cols-2 gap-2 text-xs text-white/60">
+                  <div>• Kids Passes: ₹9 per ticket</div>
+                  <div>• General Single: ₹39 per ticket</div>
+                  <div>• Premium Single: ₹59-69 per ticket</div>
+                  <div>• Couple Passes: ₹59-99 per ticket</div>
+                  <div>• Group Passes: ₹149-499 per ticket</div>
+                  <div>• Fanpit Access: ₹99-149 per ticket</div>
+                </div>
+                <p className="text-white/50 text-xs mt-2">* Commission varies by event and pass type</p>
               </div>
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { verifyStudent, StudentVerificationData, VerificationResult } from '@/lib/studentVerification';
+import { verifyStudent, StudentVerificationData, VerificationResult } from './studentVerification';
 
 interface StudentVerificationModalProps {
   isOpen: boolean;
