@@ -25,17 +25,11 @@ const nextConfig = {
         destination: 'https://797events.com/:path*',
         permanent: true,
       },
-      // Ensure all URLs end with trailing slash to match Razorpay whitelist
-      {
-        source: '/:path((?!.*\\.).*[^/])',
-        destination: '/:path*/',
-        permanent: true,
-      },
     ]
   },
   poweredByHeader: false,
   compress: true,
-  trailingSlash: true,
+  trailingSlash: false,
   reactStrictMode: true,
   swcMinify: true,
 }
