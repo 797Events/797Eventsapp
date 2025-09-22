@@ -482,6 +482,8 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
         order_id: orderData.order_id,
         name: '797 Events',
         description: `${event.title} - ${selectedPass.name} (${bookingForm.quantity} ${bookingForm.quantity === 1 ? 'ticket' : 'tickets'})`,
+        // Ensure we're on the correct domain for Razorpay
+        callback_url: 'https://797events.com/',
         handler: async function (response: any) {
           // Enhanced verification data
           const verifyResponse = await fetch('/api/razorpay/verify', {
@@ -558,6 +560,14 @@ export default function CleanBookingModal({ event, isOpen, onClose, onBooked }: 
           max_count: 3
         }
       };
+
+      // Ensure we're on the exact domain Razorpay expects
+      if (window.location.origin !== 'https://797events.com' || !window.location.pathname.endsWith('/')) {
+        const correctUrl = `https://797events.com${window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/'}${window.location.search}`;
+        console.log('🔄 Redirecting to correct domain format for Razorpay:', correctUrl);
+        window.location.href = correctUrl;
+        return;
+      }
 
       // Load and open Razorpay
       if (typeof window.Razorpay === 'undefined') {
