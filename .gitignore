@@ -30,3 +30,6 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# supplementary documents and local support files
+/extra/

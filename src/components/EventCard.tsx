@@ -114,7 +114,7 @@ export default React.memo(function EventCard({ event, onBookNow }: EventCardProp
             onClick={() => onBookNow(event)}
             className="px-6 py-2 text-base"
           >
-            {isMultiDay ? 'Choose Passes' : 'Book Now'}
+            {isMultiDay ? 'Choose Passes' : 'View Passes'}
           </Button>
         </div>
       </div>

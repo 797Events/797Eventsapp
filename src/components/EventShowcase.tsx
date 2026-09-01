@@ -20,8 +20,7 @@ export default function EventShowcase({ events, onBookNow }: EventShowcaseProps)
     // Auto-select best display mode based on event count
     if (events.length === 0) return;
     if (events.length === 1) setDisplayMode('featured');
-    else if (events.length <= 3) setDisplayMode('grid');
-    else setDisplayMode('list');
+    else setDisplayMode('grid');
   }, [events]);
 
   if (localEvents.length === 0) {
@@ -64,7 +63,7 @@ export default function EventShowcase({ events, onBookNow }: EventShowcaseProps)
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 place-items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 place-items-center">
           {localEvents.map((event) => (
             <EventCard key={event.id} event={event} onBookNow={onBookNow} />
           ))}
