@@ -1,7 +1,0 @@
-Error: supabaseUrl is required.
-    at /vercel/path0/.next/server/chunks/9498.js:21:82542
-    at new ax (/vercel/path0/.next/server/chunks/9498.js:21:82793)
-    at aI (/vercel/path0/.next/server/chunks/9498.js:21:87053)
-    at 1926 (/vercel/path0/.next/server/app/api/admin/analytics/route.js:10:3016)
-    at t (/vercel/path0/.next/server/webpack-runtime.js:1:128)
-    at 38645 (/vercel/path0/.next/server/app/api/admin/analytics/route.js:1:727)
