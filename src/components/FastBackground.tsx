@@ -52,7 +52,9 @@ export default function FastBackground({ children }: FastBackgroundProps) {
             radial-gradient(circle at 80% 20%, rgba(128, 96, 255, 0.08) 0%, transparent 50%),
             radial-gradient(circle at 40% 40%, rgba(72, 48, 144, 0.15) 0%, transparent 50%);
           z-index: 1;
-          animation: floatingGradients 25s ease-in-out infinite;
+          /* Keep the background static; rotating the full-screen layer creates
+             a visible rectangular edge over the page. */
+          animation: none;
         }
 
         .animated-overlay::before {
@@ -65,7 +67,7 @@ export default function FastBackground({ children }: FastBackgroundProps) {
           background:
             radial-gradient(circle at 60% 30%, rgba(147, 51, 234, 0.06) 0%, transparent 40%),
             radial-gradient(circle at 30% 70%, rgba(59, 7, 100, 0.08) 0%, transparent 40%);
-          animation: floatingGradients 30s ease-in-out infinite reverse;
+          animation: none;
         }
 
         .animated-overlay::after {

@@ -28,7 +28,7 @@ Type error: Type '{ id: any; event_id: any; user_id: any; check_in_time: any; ch
 ## Homepage Testing Results
 
 ### Core Functionality ✅
-- **Dual Logo Display**: 797 Events + TheWeddingXpert logos properly aligned
+- **Logo Display**: 797 Events logo properly aligned
 - **Scrolling**: Fixed - page now scrolls properly through all sections
 - **ShaderBackground**: Three.js animated purple background working
 - **Navigation**: All navigation links functional

@@ -15,7 +15,7 @@
 ### **Core Components & Features**
 
 #### **1. Hero Section**
-- **Dual Logo Layout**: 797 Events + TheWeddingXpert side-by-side
+- **Logo Layout**: 797 Events brand centered in the hero section
 - **Animated Background**: Three.js shader with purple gradient + grainy overlay
 - **Typography**: "Your Vision... Our Innovation" with custom Bethaine serif font
 - **Responsive Design**: Mobile-optimized with flexible viewport scaling

@@ -113,12 +113,6 @@ export default function HomePage() {
     }
   };
 
-  const handleLogin = () => {
-    // Redirect to login page instead of showing modal
-    window.location.href = '/login';
-  };
-
-
   const handleSignOut = () => {
     localStorage.removeItem('session');
     localStorage.removeItem('temp_admin_session');
@@ -139,8 +133,6 @@ export default function HomePage() {
 
       {/* Navigation */}
       <Navbar
-        onBookNowClick={scrollToEvents}
-        onLoginClick={handleLogin}
         isAdmin={user?.isAdmin}
         userEmail={user?.email}
         userRole={user?.role}
@@ -149,12 +141,20 @@ export default function HomePage() {
 
       <main className="flex-1 relative z-10 pt-16">
         {/* Hero Section */}
-        <section className="min-h-screen flex flex-col items-center justify-center px-4">
-          {/* Hero Logos - Side by Side */}
-          <div className="mb-8 flex items-start justify-center gap-8 flex-wrap">
-            {/* 797 Events Logo with Text Below */}
-            <div className="flex flex-col items-center">
-              <div className="relative w-[600px] h-[600px] max-w-[45vw] max-h-[40vh] md:max-h-[50vh] mb-4">
+        <section className="min-h-screen flex items-center px-6 md:px-12 lg:px-20">
+          <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-8 lg:gap-16">
+            <div className="order-2 lg:order-1 text-center lg:text-left">
+              <p className="mb-5 text-sm md:text-base font-semibold tracking-[0.3em] text-purple-200 uppercase">
+                797 Events
+              </p>
+              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold leading-[0.98] text-white opacity-0 animate-fade-slide-up" style={{ fontFamily: 'Arial, sans-serif' }}>
+                Your Vision…<br />
+                <span className="text-purple-200">Our Innovation</span>
+              </h1>
+            </div>
+
+            <div className="order-1 lg:order-2 relative flex justify-center">
+              <div className="relative w-[min(720px,88vw)] h-[min(720px,68vh)] min-h-[360px]">
                 <Image
                   src="/797logo.png"
                   alt="797 Events Logo"
@@ -163,23 +163,6 @@ export default function HomePage() {
                   priority
                 />
               </div>
-              {/* Animated Text - Below 797 Logo with Bethaine Font */}
-              <div className="text-center">
-                <h1 className="text-[18px] font-bold text-white opacity-0 animate-fade-slide-up" style={{ fontFamily: 'Bethaine, serif' }}>
-                  Your Vision… Our Innovation
-                </h1>
-              </div>
-            </div>
-
-            {/* Wedding Expert Logo */}
-            <div className="relative w-[600px] h-[600px] max-w-[45vw] max-h-[40vh] md:max-h-[50vh]">
-              <Image
-                src="/TheWeddingXpert.png"
-                alt="The Wedding Expert Logo"
-                fill
-                className="object-contain"
-                priority
-              />
             </div>
           </div>
         </section>
@@ -198,6 +181,26 @@ export default function HomePage() {
             </div>
           </section>
         )}
+
+        {/* Featured announcement */}
+        <section className="px-4 py-12 md:py-20" aria-labelledby="navaratri-heading">
+          <div className="relative max-w-6xl mx-auto overflow-hidden rounded-[2rem] border border-purple-300/25 bg-gradient-to-br from-purple-900/70 via-violet-900/60 to-indigo-950/70 px-6 py-14 text-center shadow-2xl shadow-purple-950/30 md:px-12">
+            <div className="absolute -left-20 -top-24 h-56 w-56 rounded-full bg-fuchsia-500/20 blur-3xl" aria-hidden="true" />
+            <div className="absolute -bottom-28 -right-16 h-64 w-64 rounded-full bg-indigo-400/20 blur-3xl" aria-hidden="true" />
+            <div className="relative z-10">
+              <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-purple-200">Coming Soon · 2026</p>
+              <h2 id="navaratri-heading" className="text-3xl font-bold leading-tight text-white sm:text-4xl md:text-5xl font-montserrat">
+                The Great Indian Navaratri
+              </h2>
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-white/75 sm:text-lg">
+                Get ready for an unforgettable celebration of music, dance, culture, and togetherness.
+              </p>
+              <span className="mt-8 inline-flex rounded-full border border-white/25 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm">
+                Event details coming soon
+              </span>
+            </div>
+          </div>
+        </section>
 
         {/* Gallery Section */}
         <section className="py-20 px-4">

@@ -1,7 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const configuredSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const configuredSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Keep local development from crashing when .env.local has not been created.
+// Database-backed features still require real Supabase values.
+const supabaseUrl = configuredSupabaseUrl || 'http://127.0.0.1:54321';
+const supabaseAnonKey = configuredSupabaseAnonKey || 'local-development-anon-key';
+
+if (!configuredSupabaseUrl || !configuredSupabaseAnonKey) {
+  console.warn(
+    'Supabase environment variables are missing. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local for database features.'
+  );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
